@@ -14,9 +14,9 @@
 <style>
 :root{
   --bg:#f7f6f4;--surf:#fff;--s2:#f1efec;--s3:#e6e3de;
-  --ink:#18181b;--ink2:#52525b;--ink3:#a1a1aa;--bord:#e4e4e7;
+  --ink:#18181b;--ink1:#18181b;--ink2:#52525b;--ink3:#a1a1aa;--bord:#e4e4e7;
   --acc:#2563eb;--al:#eff6ff;--ad:#1d4ed8;
-  --gld:#B45309;--gld-l:#fefce8;--gld-b:#fde68a;--gld-d:#92400e;
+  --gld-l:#fefce8;--gld-b:#fde68a;--gld-d:#92400e;
   --grn:#16a34a;--gl:#f0fdf4;--gd:#15803d;
   --red:#dc2626;--rl:#fef2f2;
   --gld:#d97706;--gdl:#fffbeb;
@@ -135,7 +135,7 @@ button,input,select,textarea{font-family:inherit;}
 .cc{background:var(--surf);border:1px solid var(--bord);border-radius:var(--rl2);padding:1.2rem;box-shadow:var(--sh);transition:box-shadow .18s,transform .17s;position:relative;overflow:hidden;}
 .cc:hover{box-shadow:var(--shm);transform:translateY(-1px);}
 .cct{position:absolute;top:0;left:0;right:0;height:2.5px;}
-.cct.bl{background:var(--acc);}.cct.gr{background:var(--grn);}.cct.go{background:var(--gld);}.cct.pu{background:var(--pur);}
+.cct.bl{background:var(--acc);}.cct.rd{background:var(--red);}.cct.gr{background:var(--grn);}.cct.go{background:var(--gld);}.cct.pu{background:var(--pur);}
 .cbdg{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem;}
 .bbl{background:var(--al);color:var(--acc);}.bgr{background:var(--gl);color:var(--grn);}.bgo{background:var(--gdl);color:var(--gld);}.bpu{background:var(--pl);color:var(--pur);}.bred{background:var(--rl);color:var(--red);}
 .cn{font-size:.9rem;font-weight:700;margin-bottom:.18rem;}
@@ -290,8 +290,8 @@ tbody tr:hover td{background:var(--bg);}
 .empty{text-align:center;padding:2.2rem 1rem;color:var(--ink2);}
 .empty-ic{font-size:2rem;opacity:.4;margin-bottom:.55rem;}
 .empty p{font-size:.8rem;margin-bottom:.75rem;}
-.toast{position:fixed;bottom:calc(1.1rem + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(130%);z-index:999;padding:.68rem 1.15rem;background:var(--ink);color:#fff;border-radius:10px;font-size:.78rem;font-weight:500;box-shadow:var(--shl);transition:transform .24s;white-space:nowrap;max-width:calc(100vw - 2rem);}
-.toast.show{transform:translateX(-50%) translateY(0);}
+.toast{position:fixed;bottom:calc(1.1rem + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(130%);z-index:999;padding:.68rem 1.15rem;background:var(--ink);color:#fff;border-radius:10px;font-size:.78rem;font-weight:500;box-shadow:var(--shl);transition:transform .24s,opacity .24s,visibility .24s;white-space:nowrap;max-width:calc(100vw - 2rem);opacity:0;visibility:hidden;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;visibility:visible;}
 .toast.ok{background:#15803d;}.toast.er{background:var(--red);}
 
 @media(max-width:640px){
@@ -621,6 +621,21 @@ tbody tr:hover td{background:var(--bg);}
 .pub-link-title{font-size:.78rem;font-weight:700;color:var(--acc);margin-bottom:2px;}
 .pub-link-url{font-size:.68rem;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
+
+/* Quick panel switcher (also gives mobile access to Subscriptions / Pay Links) */
+.qbar{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;}
+.qbar-l{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);margin-right:.2rem;}
+.qb{padding:.35rem .8rem;border-radius:999px;border:1.5px solid var(--bord);background:var(--surf);font-size:.74rem;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;}
+.qb:hover{background:var(--s2);}
+.qb.on{background:var(--al);border-color:var(--acc);color:var(--acc);}
+.qb.new{margin-left:auto;background:var(--acc);border-color:var(--acc);color:#fff;}
+/* Print only the receipt */
+@media print{
+  body *{visibility:hidden!important;}
+  #receipt-modal,#receipt-modal *{visibility:visible!important;}
+  #receipt-modal{position:absolute;inset:0;background:#fff;}
+  .receipt-footer{display:none!important;}
+}
 </style>
 </head>
 <body>
@@ -744,8 +759,8 @@ tbody tr:hover td{background:var(--bg);}
   <footer class="site-footer">
     <div class="ft-logo">VyCheckout</div>
     <div class="ft-links">
-      <a href="/privacy" target="_blank">Privacy Policy</a>
-      <a href="/terms" target="_blank">Terms of Service</a>
+      <a onclick="showPolicy('privacy')">Privacy Policy</a>
+      <a onclick="showPolicy('terms')">Terms of Service</a>
       <a href="/docs" target="_blank" style="color:var(--gld)">Docs</a>
       <a href="mailto:support@vycheckout.com">Contact</a>
     </div>
@@ -773,7 +788,7 @@ tbody tr:hover td{background:var(--bg);}
       <div class="fg"><label>Referral Code (optional)</label><input type="text" id="su-r" placeholder="e.g. JANE3K2" style="text-transform:uppercase"></div>
       <button class="bfull" id="su-btn" onclick="doSignup()">Create Account</button>
       <div class="asw">Have an account? <a onclick="showView('login')">Sign in</a></div>
-      <div class="auth-footer"><a href="/privacy" target="_blank">Privacy Policy</a>·<a href="/terms" target="_blank">Terms of Service</a></div>
+      <div class="auth-footer"><a onclick="showPolicy('privacy')">Privacy Policy</a>·<a onclick="showPolicy('terms')">Terms of Service</a></div>
     </div>
   </div>
 </div>
@@ -821,7 +836,7 @@ tbody tr:hover td{background:var(--bg);}
       </div>
       <button class="bfull" id="li-btn" onclick="doLogin()">Sign In</button>
       <div class="asw">New? <a onclick="showView('signup')">Create account</a></div>
-      <div class="auth-footer"><a href="/privacy" target="_blank">Privacy Policy</a>·<a href="/terms" target="_blank">Terms of Service</a></div>
+      <div class="auth-footer"><a onclick="showPolicy('privacy')">Privacy Policy</a>·<a onclick="showPolicy('terms')">Terms of Service</a></div>
     </div>
   </div>
 </div>
@@ -953,10 +968,17 @@ const CURS = {
   AUD:{f:'🇦🇺',s:'A$'},CAD:{f:'🇨🇦',s:'C$'},SGD:{f:'🇸🇬',s:'S$'},
   INR:{f:'🇮🇳',s:'₹'},MYR:{f:'🇲🇾',s:'RM'},LKR:{f:'🇱🇰',s:'Rs'},
   AED:{f:'🇦🇪',s:'د.إ'},NGN:{f:'🇳🇬',s:'₦'},BRL:{f:'🇧🇷',s:'R$'},
-  JPY:{f:'🇯🇵',s:'¥'},ZAR:{f:'🇿🇦',s:'R'},PHP:{f:'🇵🇭',s:'₱'},
+  JPY:{f:'🇯🇵',s:'¥'},MXN:{f:'🇲🇽',s:'MX$'},HKD:{f:'🇭🇰',s:'HK$'},ZAR:{f:'🇿🇦',s:'R'},PHP:{f:'🇵🇭',s:'₱'},
 };
 const CS = c => CURS[c]?.s || '$';
 const CF = c => CURS[c]?.f || '🌍';
+// Currencies with no minor unit: PayPal rejects "1000.00" JPY and Stripe expects ¥1000 as 1000, not 100000.
+const ZERO_DEC = ['JPY','KRW','VND','CLP'];
+const isZD = c => ZERO_DEC.includes(String(c || 'USD').toUpperCase());
+function fmtAmt(n, c) {
+  const v = +n || 0;
+  return CS(c) + (isZD(c) ? Math.round(v).toLocaleString() : v.toFixed(2));
+}
 
 // ═══════════════════════════════════════════════
 // STATE
@@ -1100,16 +1122,13 @@ async function doSignup() {
     return;
   }
 
+  // Remember the referral code; afterLogin applies it once the profile row exists.
+  if (ref) localStorage.setItem('vy_pending_ref', ref); else localStorage.removeItem('vy_pending_ref');
+
   // Step 2: session returned — email confirmation OFF — go straight to dashboard
   if (authData.session && authData.user) {
-    if (ref) {
-      const { data: refUser } = await sb.from('profiles').select('id').eq('ref_code', ref).single();
-      if (refUser) await sb.from('profiles').update({ referrer_id: refUser.id }).eq('id', authData.user.id);
-    }
     setBL('su-btn', false, 'Create Account');
-    localStorage.removeItem('vy_pending_ref');
-    toast('Welcome to VyCheckout! 🎉', 'ok');
-    await afterLogin(authData.user);
+    await afterLogin(authData.user, { welcome: 'Welcome to VyCheckout! 🎉' });
     return;
   }
 
@@ -1117,13 +1136,7 @@ async function doSignup() {
   setBL('su-btn', false, 'Create Account');
   const { data: signInData, error: signInErr } = await sb.auth.signInWithPassword({ email, password: pass });
   if (!signInErr && signInData.session) {
-    if (ref) {
-      const { data: refUser } = await sb.from('profiles').select('id').eq('ref_code', ref).single();
-      if (refUser && signInData.user) await sb.from('profiles').update({ referrer_id: refUser.id }).eq('id', signInData.user.id);
-    }
-    localStorage.removeItem('vy_pending_ref');
-    toast('Welcome to VyCheckout! 🎉', 'ok');
-    await afterLogin(signInData.user);
+    await afterLogin(signInData.user, { welcome: 'Welcome to VyCheckout! 🎉' });
     return;
   }
 
@@ -1151,16 +1164,12 @@ async function doLogin() {
     return;
   }
   setBL('li-btn', false, 'Sign In');
-  await afterLogin(data.user);
+  await afterLogin(data.user, { welcome: true });
 }
 
 async function doGoogleLogin() {
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
-    options: {
-      redirectTo: 'https://pquljldqkvzrtmblswuq.supabase.co/auth/v1/callback',
-      queryParams: { client_id: '420785792464-budnq4v9a061iectjbs31pdfib73lc7t.apps.googleusercontent.com' }
-    },
     options: {
       redirectTo: location.origin + location.pathname,
       queryParams: { access_type: 'offline', prompt: 'consent' }
@@ -1170,7 +1179,9 @@ async function doGoogleLogin() {
   // Supabase redirects to Google — on return, onAuthStateChange fires afterLogin automatically
 }
 
-async function afterLogin(user) {
+// opts.welcome: show a welcome toast (true or custom text). opts.quiet: load the session without opening the dashboard.
+async function afterLogin(user, opts) {
+  opts = opts || {};
   currentUser = user;
   // Load profile from DB — may not exist yet for new users
   let { data: prof } = await sb.from('profiles').select('*').eq('id', user.id).single();
@@ -1205,9 +1216,11 @@ async function afterLogin(user) {
     ref_code: genRefCode()
   };
 
+  await applyPendingReferral();
+
   isAdmin = (user.email || '').toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim();
-  console.log('[Admin check] email:', user.email, '| isAdmin:', isAdmin);
   updateNav();
+  if (opts.quiet) return;
 
   // Show dashboard IMMEDIATELY — don't wait for data to load
   if (isAdmin) {
@@ -1218,8 +1231,23 @@ async function afterLogin(user) {
     await renderUserDash();
   }
 
-  const firstName = currentProfile?.full_name?.split(' ')[0] || '';
-  toast('Welcome' + (firstName ? ', ' + firstName : '') + '! 👋', 'ok');
+  if (opts.welcome) {
+    const firstName = currentProfile?.full_name?.split(' ')[0] || '';
+    toast(typeof opts.welcome === 'string' ? opts.welcome : 'Welcome' + (firstName ? ', ' + firstName : '') + '! 👋', 'ok');
+  }
+}
+
+// Attach a referral code saved at signup (or from a ?ref= link) once the profile row exists.
+async function applyPendingReferral() {
+  const code = (localStorage.getItem('vy_pending_ref') || '').toUpperCase().trim();
+  if (!code || !currentUser || !currentProfile) return;
+  localStorage.removeItem('vy_pending_ref');
+  if (currentProfile.referrer_id) return;
+  if (code === String(currentProfile.ref_code || '').toUpperCase()) return; // no self-referral
+  const { data: refUser } = await sb.from('profiles').select('id').eq('ref_code', code).single();
+  if (!refUser || refUser.id === currentUser.id) return;
+  const { error } = await sb.from('profiles').update({ referrer_id: refUser.id }).eq('id', currentUser.id);
+  if (!error) currentProfile.referrer_id = refUser.id;
 }
 
 async function doLogout() {
@@ -1264,9 +1292,6 @@ async function doForgotPassword() {
 // USER DASHBOARD — build sidebar + panels
 // ═══════════════════════════════════════════════
 async function renderUserDash() {
-  // Jump straight to Collections panel so user lands there instantly
-  setTimeout(function() { spU('p-cols', document.querySelector('.sbb')); }, 50);
-
   const sb_el = g('dash-sb');
   sb_el.innerHTML = `
     <div class="sb-lbl">Overview</div>
@@ -1279,6 +1304,7 @@ async function renderUserDash() {
     <div class="sb-lbl">Create</div>
     <button class="sbb" onclick="spU('p-nc',this)"><span class="si">➕</span>New Collection</button>
     <button class="sbb" onclick="spU('p-ns',this)"><span class="si">➕</span>New Subscription</button>
+    <button class="sbb" onclick="spU('p-nl',this)"><span class="si">➕</span>New Pay Link</button>
     <div class="sb-lbl">Finance</div>
     <button class="sbb" onclick="spU('p-txn',this)"><span class="si">💰</span>Transactions</button>
     <button class="sbb" onclick="spU('p-wd',this)"><span class="si">🏦</span>Withdraw</button>
@@ -1290,11 +1316,12 @@ async function renderUserDash() {
     <div class="panel active" id="p-home">
 
       <!-- Greeting -->
-      <div class="home-greet">
+      <div class="home-greet" style="display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem">
         <div>
           <div class="home-greet-hi" id="h-title">Dashboard</div>
           <div class="home-greet-sub">Here's your overview</div>
         </div>
+        <button class="nb" onclick="quickNav('p-api')">⚡ API keys</button>
       </div>
 
       <!-- Profile card -->
@@ -1339,13 +1366,14 @@ async function renderUserDash() {
       </div>
     </div>
     <!-- COLLECTIONS -->
-    <div class="panel" id="p-cols"><div class="pt">Collections</div><div class="ps">One-time payment campaigns</div><div class="cg" id="cols-g"><div class="empty"><div class="empty-ic">📋</div><p>Loading…</p></div></div></div>
+    <div class="panel" id="p-cols">${listBar('p-cols')}<div class="pt">Collections</div><div class="ps">One-time payment campaigns</div><div class="cg" id="cols-g"><div class="empty"><div class="empty-ic">📋</div><p>Loading…</p></div></div></div>
     <!-- SUBSCRIPTIONS -->
-    <div class="panel" id="p-subs"><div class="pt">Subscriptions</div><div class="ps">Recurring billing plans</div><div class="cg" id="subs-g"><div class="empty"><div class="empty-ic">🔄</div><p>Loading…</p></div></div></div>
+    <div class="panel" id="p-subs">${listBar('p-subs')}<div class="pt">Subscriptions</div><div class="ps">Recurring billing plans</div><div class="cg" id="subs-g"><div class="empty"><div class="empty-ic">🔄</div><p>Loading…</p></div></div></div>
     <!-- PAY LINKS -->
-    <div class="panel" id="p-lnks"><div class="pt">Payment Links</div><div class="ps">Shareable checkout links</div><div class="cg" id="lnks-g"><div class="empty"><div class="empty-ic">🔗</div><p>Loading…</p></div></div></div>
+    <div class="panel" id="p-lnks">${listBar('p-lnks')}<div class="pt">Payment Links</div><div class="ps">Shareable checkout links</div><div class="cg" id="lnks-g"><div class="empty"><div class="empty-ic">🔗</div><p>Loading…</p></div></div></div>
     <!-- NEW COLLECTION -->
     <div class="panel" id="p-nc">
+      ${newBar('p-nc')}
       <div class="pt">New Collection</div><div class="ps">Set up details then accept payment directly below</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:860px;">
         <div class="fs"><h3>Collection details</h3>
@@ -1372,6 +1400,7 @@ async function renderUserDash() {
     </div>
     <!-- NEW SUBSCRIPTION -->
     <div class="panel" id="p-ns">
+      ${newBar('p-ns')}
       <div class="pt">New Subscription</div><div class="ps">Set up details then accept the first payment below</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:860px;">
         <div class="fs"><h3>Plan details</h3>
@@ -1398,6 +1427,7 @@ async function renderUserDash() {
     </div>
     <!-- NEW LINK -->
     <div class="panel" id="p-nl">
+      ${newBar('p-nl')}
       <div class="pt">New Payment Link</div><div class="ps">Fill in details — pay now or share the link</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:860px;">
         <div class="fs"><h3>Link details</h3>
@@ -1427,7 +1457,7 @@ async function renderUserDash() {
     <!-- TRANSACTIONS -->
     <div class="panel" id="p-txn">
       <div class="pt">Transactions</div><div class="ps">All your received payments</div>
-      <div class="tw"><table><thead><tr><th>Date</th><th>Description</th><th>Gross</th><th>Net (yours)</th><th>Method</th><th>Status</th></tr></thead><tbody id="all-txn"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Date</th><th>Payer</th><th>Description</th><th>Gross</th><th>Net (yours)</th><th>Method</th><th>Status</th></tr></thead><tbody id="all-txn"></tbody></table></div>
     </div>
     <!-- WITHDRAW -->
     <div class="panel" id="p-wd">
@@ -1488,7 +1518,7 @@ async function renderUserDash() {
         <div class="sc"><div class="scl">Earned</div><div class="scv gr" id="ref-earn">…</div></div>
       </div>
       <div class="sh2"><h3>Your referrals</h3></div>
-      <div class="tw"><table><thead><tr><th>Name</th><th>Joined</th><th>Their Total</th><th>You Earned</th></tr></thead><tbody id="ref-tbl"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Name</th><th>Joined</th><th>Status</th></tr></thead><tbody id="ref-tbl"></tbody></table></div>
     </div>
 
     <!-- API KEYS -->
@@ -1539,9 +1569,9 @@ async function renderUserDash() {
       <div class="api-key-box" style="margin-top:1rem">
         <div class="api-key-title" style="margin-bottom:.8rem">📊 API Usage</div>
         <div id="api-usage-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem">
-          <div class="dash-stat"><div class="dash-stat-lbl">Collections via API</div><div class="dash-stat-val" style="color:var(--acc)" id="api-stat-cols">—</div></div>
-          <div class="dash-stat"><div class="dash-stat-lbl">Pay Links via API</div><div class="dash-stat-val" style="color:var(--gld)" id="api-stat-lnks">—</div></div>
-          <div class="dash-stat"><div class="dash-stat-lbl">Total Transactions</div><div class="dash-stat-val" style="color:var(--grn)" id="api-stat-txns">—</div></div>
+          <div class="dash-stat"><div class="dash-stat-l">Collections via API</div><div class="dash-stat-v" style="color:var(--acc)" id="api-stat-cols">—</div></div>
+          <div class="dash-stat"><div class="dash-stat-l">Pay Links via API</div><div class="dash-stat-v" style="color:var(--gld)" id="api-stat-lnks">—</div></div>
+          <div class="dash-stat"><div class="dash-stat-l">Total Transactions</div><div class="dash-stat-v" style="color:var(--grn)" id="api-stat-txns">—</div></div>
         </div>
         <div style="font-size:.68rem;color:var(--ink3);margin-top:.6rem">API collections and links are tagged automatically when created via your API key.</div>
       </div>
@@ -1579,16 +1609,18 @@ async function loadUserData() {
   console.log('[VyCheckout] Referrals fetch:', { uid, count: refs.length, error: _refs?.error });
 
   // Recalculate balance from transactions and withdrawals
-  const earned = txns.filter(t => t.status === 'succeeded').reduce((a,t) => a + (t.net_amount || 0), 0);
-  const refEarned = txns.filter(t => t.status === 'succeeded').reduce((a,t) => a + (t.referral_amount || 0), 0);
-  const wdOut = wds.filter(w => w.status !== 'rejected').reduce((a,w) => a + (w.amount || 0), 0);
-  const balance = Math.max(0, earned - wdOut);
+  const earned = +txns.filter(t => t.status === 'succeeded').reduce((a,t) => a + (+t.net_amount || 0), 0).toFixed(2);
+  // Referral commissions come from OTHER users' transactions and are credited to profiles.ref_earned
+  // by increment_ref_balance, so read them from the profile instead of summing this user's own rows.
+  const { data: refProf } = await sb.from('profiles').select('ref_earned').eq('id', uid).single();
+  const refEarned = +(refProf?.ref_earned || 0);
+  const wdOut = wds.filter(w => w.status !== 'rejected').reduce((a,w) => a + (+w.amount || 0), 0);
+  const balance = Math.max(0, +(earned + refEarned - wdOut).toFixed(2));
 
-  // Update profile in DB
+  // Update profile in DB (ref_earned is left alone so referral credits aren't wiped)
   await sb.from('profiles').update({
     balance: balance,
     total_earned: earned,
-    ref_earned: refEarned,
     updated_at: new Date().toISOString()
   }).eq('id', uid);
 
@@ -1610,17 +1642,16 @@ async function loadUserData() {
     g('pc-url').textContent = bizSlug ? bizSlug + ' · ' + profUrl.split('?')[1] : profUrl;
   }
 
-  renderHome(txns, balance, earned);
+  renderHome(txns, balance, earned, refEarned);
   renderCols(cols, txns);
   renderSubs(subs);
   renderLnks(lnks);
-  renderTxns(txns);
+  renderTxns(txns, cols, subs, lnks);
   renderWdPanel(wds, balance);
-  renderRef(txns, refs);
+  renderRef(refs, refEarned);
 
   const firstName = currentProfile?.full_name?.split(' ')[0] || 'there';
   if (g('h-title')) g('h-title').textContent = 'Hi, ' + firstName + ' 👋';
-  if (g('home-greet-sub')) g('home-greet-sub').textContent = 'Here is your overview';
   loadFollowerCount();
   loadApiKey();
 }
@@ -1628,15 +1659,14 @@ async function loadUserData() {
 // ═══════════════════════════════════════════════
 // RENDER PANELS
 // ═══════════════════════════════════════════════
-function renderHome(txns, balance, earned) {
+function renderHome(txns, balance, earned, refEarned) {
   const succeeded = txns.filter(t => t.status === 'succeeded');
   const now = new Date(), ms = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const mon = succeeded.filter(t => new Date(t.created_at).getTime() >= ms).reduce((a,t) => a + (t.net_amount||0), 0);
-  const refE = succeeded.reduce((a,t) => a + (t.referral_amount||0), 0);
   sv('s-bal', fm(balance));
   sv('s-tot', fm(earned));
   sv('s-mon', fm(mon));
-  sv('s-ref', fm(refE));
+  sv('s-ref', fm(refEarned || 0));
   // Load the social feed
   loadWallFeed();
 }
@@ -1747,7 +1777,7 @@ async function loadWallFeed() {
 
     const priceEl = document.createElement('div');
     priceEl.className = 'wall-item-price';
-    priceEl.textContent = sym + parseFloat(item.amount).toFixed(2);
+    priceEl.textContent = fmtAmt(item.amount, item.currency);
 
     const payBtn = document.createElement('button');
     payBtn.className = 'wall-pay-btn';
@@ -1803,24 +1833,54 @@ async function wallToggleFollow(userId) {
   setTimeout(loadWallFeed, 500);
 }
 
+// Items rendered in the dashboard, keyed "type:id", so buttons never embed names inside inline JS.
+const _items = {};
+
+function cardActions(type, it, payLabel, table) {
+  const key = type + ':' + it.id;
+  _items[key] = {
+    id: it.id, type, name: it.name, amount: +it.amount, currency: it.currency || 'USD', custom: !!it.custom_amount,
+    business: currentProfile?.business_name || currentProfile?.full_name || ''
+  };
+  return `<div class="lb"><input readonly value="${esc(coUrl(type, it.id))}"><button data-act="copy">Copy</button></div>
+      <div class="cacts mt1">
+        <button class="bxs bl" data-act="pay" data-key="${esc(key)}">${payLabel}</button>
+        <button class="bxs" data-act="qr" data-key="${esc(key)}">QR</button>
+        <button class="bxs rd" data-act="del" data-table="${table}" data-id="${esc(it.id)}">Delete</button>
+      </div>`;
+}
+
+document.addEventListener('click', function(e) {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'copy') {
+    const inp = b.closest('.lb')?.querySelector('input');
+    if (inp) copyText(inp.value);
+  } else if (act === 'pay') {
+    const it = _items[b.dataset.key]; if (!it) return;
+    // The dashboard modal has no amount box, so payer-chosen amounts go through the public checkout
+    if (it.custom) window.open(coUrl(it.type, it.id), '_blank'); else openPay(it);
+  } else if (act === 'qr') {
+    const it = _items[b.dataset.key]; if (it) showQR(coUrl(it.type, it.id), it.name);
+  } else if (act === 'del') {
+    delItem(b.dataset.table, b.dataset.id);
+  }
+});
+
 function renderCols(cols, txns) {
   const g2 = g('cols-g');
   if (!g2) return;
   if (!cols.length) { g2.innerHTML = empt('📋', 'No collections yet.'); return; }
   g2.innerHTML = cols.map(c => {
-    const url = coUrl('col', c.id);
     const cnt = txns.filter(t => t.source_id === c.id && t.status === 'succeeded').length;
     return `<div class="cc"><div class="cct bl"></div>
       <span class="cbdg bbl">Collection</span>
       <div class="cn">${esc(c.name)}</div>
-      <div class="ca">${CS(c.currency)+c.amount.toFixed(2)} <small style="font-size:.68rem;color:var(--ink2)">${c.currency}</small></div>
-      <div class="cd">${esc(c.description||'')}</div>
-      <div class="cm">Created ${fd(c.created_at)} · ${cnt} payment${cnt!==1?'s':''}</div>
-      <div class="lb"><input readonly id="lc${c.id}" value="${url}"><button onclick="cpEl('lc${c.id}')">Copy</button></div>
-      <div class="cacts mt1">
-        <button class="bxs bl" onclick="openPay('${c.id}','col',${c.amount},'${esc(c.name)}','${c.currency||'USD'}')">💳 Pay</button>
-        <button class="bxs rd" onclick="delItem('vy_collections','${c.id}')">Delete</button>
-      </div></div>`;
+      <div class="ca">${c.custom_amount ? 'Any amount' : fmtAmt(c.amount, c.currency)} <small style="font-size:.68rem;color:var(--ink2)">${esc(c.currency || 'USD')}</small></div>
+      <div class="cd">${esc(c.description || '')}</div>
+      <div class="cm">Created ${fd(c.created_at)} · ${cnt} payment${cnt !== 1 ? 's' : ''}</div>
+      ${cardActions('col', c, '💳 Pay', 'vy_collections')}</div>`;
   }).join('');
 }
 
@@ -1828,17 +1888,16 @@ function renderSubs(subs) {
   const g2 = g('subs-g');
   if (!g2) return;
   if (!subs.length) { g2.innerHTML = empt('🔄', 'No subscription plans yet.'); return; }
-  g2.innerHTML = subs.map(s => `<div class="cc"><div class="cct pu"></div>
-    <span class="cbdg bpu">Subscription · ${s.cycle||'MONTHLY'}</span>
-    <div class="cn">${esc(s.name)}</div>
-    <div class="ca">${CS(s.currency)+s.amount.toFixed(2)}<small style="font-size:.68rem;color:var(--ink2)">/${(s.cycle||'MONTHLY').toLowerCase()}</small></div>
-    <div class="cd">${esc(s.description||'')}</div>
-    <div class="cm">Created ${fd(s.created_at)}</div>
-    <div class="lb"><input readonly id="ls${s.id}" value="${coUrl('sub',s.id)}"><button onclick="cpEl('ls${s.id}')">Copy</button></div>
-    <div class="cacts mt1">
-      <button class="bxs bl" onclick="openPay('${s.id}','sub',${s.amount},'${esc(s.name)}','${s.currency||'USD'}')">💳 Subscribe</button>
-      <button class="bxs rd" onclick="delItem('vy_subscriptions','${s.id}')">Delete</button>
-    </div></div>`).join('');
+  g2.innerHTML = subs.map(s => {
+    const cy = esc(s.cycle || 'MONTHLY');
+    return `<div class="cc"><div class="cct pu"></div>
+      <span class="cbdg bpu">Subscription · ${cy}</span>
+      <div class="cn">${esc(s.name)}</div>
+      <div class="ca">${fmtAmt(s.amount, s.currency)}<small style="font-size:.68rem;color:var(--ink2)">/${cy.toLowerCase()}</small></div>
+      <div class="cd">${esc(s.description || '')}</div>
+      <div class="cm">Created ${fd(s.created_at)}</div>
+      ${cardActions('sub', s, '💳 Subscribe', 'vy_subscriptions')}</div>`;
+  }).join('');
 }
 
 function renderLnks(lnks) {
@@ -1847,81 +1906,96 @@ function renderLnks(lnks) {
   if (!lnks.length) { g2.innerHTML = empt('🔗', 'No payment links yet.'); return; }
   g2.innerHTML = lnks.map(l => {
     const exp = l.expires_at && new Date(l.expires_at) < new Date();
-    return `<div class="cc"><div class="cct ${exp?'rd':'gr'}"></div>
-      <span class="cbdg ${exp?'bred':'bgr'}">${exp?'Expired':'Active'}</span>
+    return `<div class="cc"><div class="cct ${exp ? 'rd' : 'gr'}"></div>
+      <span class="cbdg ${exp ? 'bred' : 'bgr'}">${exp ? 'Expired' : 'Active'}</span>
       <div class="cn">${esc(l.name)}</div>
-      <div class="ca">${CS(l.currency)+l.amount.toFixed(2)}</div>
-      <div class="cd">${esc(l.note||'')}</div>
-      <div class="cm">Created ${fd(l.created_at)}${l.expires_at?' · Exp '+fd(l.expires_at):''}</div>
-      <div class="lb"><input readonly id="ll${l.id}" value="${coUrl('lnk',l.id)}"><button onclick="cpEl('ll${l.id}')">Copy</button></div>
-      <div class="cacts mt1">
-        <button class="bxs bl" onclick="openPay('${l.id}','lnk',${l.amount},'${esc(l.name)}','${l.currency||'USD'}')">💳 Test</button>
-        <button class="bxs rd" onclick="delItem('vy_pay_links','${l.id}')">Delete</button>
-      </div></div>`;
+      <div class="ca">${l.custom_amount ? 'Any amount' : fmtAmt(l.amount, l.currency)}</div>
+      <div class="cd">${esc(l.note || '')}</div>
+      <div class="cm">Created ${fd(l.created_at)}${l.expires_at ? ' · Exp ' + fd(l.expires_at) : ''}</div>
+      ${cardActions('lnk', l, '💳 Test', 'vy_pay_links')}</div>`;
   }).join('');
 }
 
-function renderTxns(txns) {
+function renderTxns(txns, cols, subs, lnks) {
   const tb = g('all-txn');
   if (!tb) return;
-  if (!txns.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--ink3)">No transactions yet</td></tr>'; return; }
-  tb.innerHTML = txns.map(t => `<tr>
+  if (!txns.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--ink3)">No transactions yet</td></tr>'; return; }
+  // Transactions don't store a currency, so take it from the item they were paid against.
+  const curOf = {};
+  [].concat(cols || [], subs || [], lnks || []).forEach(i => { curOf[i.id] = i.currency || 'USD'; });
+  tb.innerHTML = txns.map(t => {
+    const cur = curOf[t.source_id] || 'USD';
+    return `<tr>
     <td>${fd(t.created_at)}</td>
-    <td>${t.payer_name ? '<strong>'+esc(t.payer_name)+'</strong>' : '<span style="color:var(--ink3)">—</span>'}</td>
-    <td>${esc(t.description||'')}</td>
-    <td>${fm(t.gross_amount||0)}</td>
-    <td style="color:var(--grn)">${fm(t.net_amount||0)}</td>
-    <td><span class="pill ${t.status==='succeeded'?'pg':'pr'}">${t.status==='succeeded'?'✓ Paid':t.status}</span></td>
-  </tr>`).join('');
+    <td>${t.payer_name ? '<strong>' + esc(t.payer_name) + '</strong>' : '<span style="color:var(--ink3)">—</span>'}</td>
+    <td>${esc(t.description || '')}</td>
+    <td>${fmtAmt(t.gross_amount, cur)}</td>
+    <td style="color:var(--grn)">${fmtAmt(t.net_amount, cur)}</td>
+    <td><span class="pill pb">${esc(t.payment_method || 'PayPal')}</span></td>
+    <td><span class="pill ${t.status === 'succeeded' ? 'pg' : 'pr'}">${t.status === 'succeeded' ? '✓ Paid' : esc(t.status)}</span></td>
+  </tr>`;
+  }).join('');
 }
 
 function renderWdPanel(wds, balance) {
   if (!g('wd-avail')) return;
   sv('wd-avail', fm(balance));
-  g('wd-warn')?.classList.toggle('hidden', balance > 0);
+  const warn = g('wd-warn');
+  if (warn) {
+    warn.classList.toggle('hidden', balance >= PP_MIN_WD);
+    warn.textContent = balance <= 0
+      ? '⚠️ You have no balance to withdraw yet.'
+      : '⚠️ Your balance (' + fm(balance) + ') is below the ' + fm(PP_MIN_WD) + ' PayPal minimum (' + fm(BK_MIN_WD) + ' for bank).';
+  }
 
   const tb = g('wd-hist');
   if (!tb) return;
-  if (!wds.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--ink3)">No withdrawals yet</td></tr>'; return; }
+  if (!wds.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--ink3)">No withdrawals yet</td></tr>'; return; }
   tb.innerHTML = wds.map(w => `<tr>
-    <td>${fd(w.created_at)}</td><td>${fm(w.amount)}</td><td>${w.method}</td>
-    <td style="font-size:.73rem;color:var(--ink2)">${esc(w.destination||'')}</td>
-    <td><span class="pill ${w.status==='completed'?'pg':w.status==='rejected'?'pr':w.status==='approved'?'pb':'pgo'}">${w.status}</span></td>
+    <td>${fd(w.created_at)}</td><td>${fm(w.amount)}</td><td>${esc(w.method || '')}</td>
+    <td style="font-size:.73rem;color:var(--ink2)">${esc(w.destination || '')}</td>
+    <td><span class="pill ${w.status === 'completed' ? 'pg' : w.status === 'rejected' ? 'pr' : w.status === 'approved' ? 'pb' : 'pgo'}">${esc(w.status)}</span></td>
+    <td style="font-size:.73rem;color:var(--ink2)">${esc(w.admin_note || w.note || w.notes || '')}</td>
   </tr>`).join('');
 }
 
-function renderRef(txns, refs) {
+function renderRef(refs, refEarned) {
   if (!g('ref-cnt')) return;
   refs = refs || [];
-
-  // Total referral earnings from transactions
-  const refTxns = txns.filter(t => t.status === 'succeeded' && (t.referral_to || t.referral_amount > 0));
-  const earned = refTxns.reduce((a,t) => a + (t.referral_amount||0), 0);
-
-  sv('ref-cnt', refs.length.toString());
-  sv('ref-earn', fm(earned));
+  sv('ref-cnt', String(refs.length));
+  sv('ref-earn', fm(refEarned || 0));
 
   const tb = g('ref-tbl');
   if (!tb) return;
-
-  if (refs.length === 0) {
-    tb.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--ink3)">No referrals yet — share your link to start earning 1%</td></tr>';
+  if (!refs.length) {
+    tb.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--ink3)">No referrals yet — share your link to start earning 1%</td></tr>';
     return;
   }
-
-  tb.innerHTML = refs.map(r => {
-    // Sum earnings from this specific referral
-    const rEarned = refTxns
-      .filter(t => t.referrer_id === r.id || t.referral_to === r.id)
-      .reduce((a,t) => a + (t.referral_amount||0), 0);
-    const name = esc(r.business_name || r.full_name || 'User');
-    return `<tr>
-      <td><span style="font-weight:600">${name}</span></td>
+  tb.innerHTML = refs.map(r => `<tr>
+      <td><span style="font-weight:600">${esc(r.business_name || r.full_name || 'User')}</span></td>
       <td style="color:var(--ink3);font-size:.75rem">${fd(r.created_at)}</td>
-      <td style="color:var(--grn);font-weight:600">${fm(rEarned)}</td>
       <td><span class="pill pg">Active</span></td>
-    </tr>`;
-  }).join('');
+    </tr>`).join('');
+}
+
+// Panel switcher bars
+function listBar(active) {
+  const items = [['p-cols', '📋 Collections'], ['p-subs', '🔄 Subscriptions'], ['p-lnks', '🔗 Pay Links']];
+  const newFor = { 'p-cols': 'p-nc', 'p-subs': 'p-ns', 'p-lnks': 'p-nl' }[active];
+  return '<div class="qbar">' + items.map(([id, l]) =>
+    `<button class="qb${id === active ? ' on' : ''}" onclick="quickNav('${id}')">${l}</button>`).join('') +
+    `<button class="qb new" onclick="quickNav('${newFor}')">➕ New</button></div>`;
+}
+function newBar(active) {
+  const items = [['p-nc', 'Collection'], ['p-ns', 'Subscription'], ['p-nl', 'Pay Link']];
+  return '<div class="qbar"><span class="qbar-l">New</span>' + items.map(([id, l]) =>
+    `<button class="qb${id === active ? ' on' : ''}" onclick="quickNav('${id}')">${l}</button>`).join('') + '</div>';
+}
+function quickNav(id) {
+  const btn = document.querySelector(`#dash-sb .sbb[onclick*="'${id}'"]`);
+  spU(id, btn);
+  document.querySelectorAll('.mnb').forEach(b => b.classList.remove('active'));
+  window.scrollTo(0, 0);
 }
 
 // ═══════════════════════════════════════════════
@@ -2101,54 +2175,35 @@ async function submitWd(method) {
 // ═══════════════════════════════════════════════
 // PAYPAL — DYNAMIC SDK LOADER + BUTTON RENDERER
 // ═══════════════════════════════════════════════
-let _ppSDKLoaded = false;
-let _ppSDKCurrency = '';
-let _ppSDKLoading = false;
-let _ppSDKQueue = [];
+// Each currency loads into its own SDK namespace (paypal_USD, paypal_EUR …), so loading a second
+// currency never tears down buttons that are already rendered for another one.
+const _ppNS = {}; // currency -> 'loaded' | [pending callbacks]
+const ppNamespace = c => 'paypal_' + c;
 
 function loadPayPalSDK(currency, cb) {
   currency = (currency || 'USD').toUpperCase();
-
-  // If already loaded for same currency, call back immediately
-  if (_ppSDKLoaded && _ppSDKCurrency === currency && typeof paypal !== 'undefined') {
-    cb(); return;
-  }
-
-  // Queue the callback if already loading
-  if (_ppSDKLoading) {
-    _ppSDKQueue.push(cb); return;
-  }
-
-  // Remove any existing PayPal script to reload with new currency
-  const existing = document.getElementById('paypal-sdk-script');
-  if (existing) { existing.remove(); delete window.paypal; }
-
-  _ppSDKLoading = true;
-  _ppSDKLoaded = false;
+  const st = _ppNS[currency];
+  if (st === 'loaded' && window[ppNamespace(currency)]) { cb(); return; }
+  if (Array.isArray(st)) { st.push(cb); return; }
+  _ppNS[currency] = [cb];
 
   const script = document.createElement('script');
-  script.id = 'paypal-sdk-script';
-  // Key params: currency per payment, enable ALL funding sources
   script.src = 'https://www.paypal.com/sdk/js'
     + '?client-id=' + window.__PP_CID
     + '&currency=' + currency
     + '&intent=capture'
     + '&enable-funding=card,credit,paylater,venmo'
     + '&components=buttons';
-  script.setAttribute('data-namespace', 'paypal');
+  script.setAttribute('data-namespace', ppNamespace(currency));
   script.onload = function() {
-    _ppSDKLoaded = true;
-    _ppSDKCurrency = currency;
-    _ppSDKLoading = false;
-    cb();
-    // Drain queue
-    _ppSDKQueue.forEach(fn => fn());
-    _ppSDKQueue = [];
+    const q = _ppNS[currency]; _ppNS[currency] = 'loaded';
+    q.forEach(fn => fn());
   };
   script.onerror = function() {
-    _ppSDKLoading = false;
-    _ppSDKQueue = [];
-    console.error('PayPal SDK failed to load');
+    const q = _ppNS[currency]; delete _ppNS[currency];
+    script.remove();
+    console.error('PayPal SDK failed to load for', currency);
+    q.forEach(fn => fn()); // callers show their own "could not load" message
   };
   document.head.appendChild(script);
 }
@@ -2176,13 +2231,14 @@ function renderPPButtons(containerId, item, onSuccess) {
     // Clear spinner
     container.innerHTML = '';
 
-    if (typeof paypal === 'undefined') {
+    const pp = window[ppNamespace(currency)];
+    if (!pp) {
       container.innerHTML = '<div style="color:var(--red);font-size:.8rem;padding:.6rem;border:1px solid var(--rl);border-radius:8px;background:var(--rl)">PayPal could not load. Check your internet connection.</div>';
       return;
     }
 
     try {
-      const btn = paypal.Buttons({
+      const btn = pp.Buttons({
         style: {
           layout:  'vertical',
           color:   'blue',
@@ -2197,7 +2253,7 @@ function renderPPButtons(containerId, item, onSuccess) {
             intent: 'CAPTURE',
             purchase_units: [{
               amount: {
-                value:         amt.toFixed(2),
+                value:         isZD(currency) ? String(Math.round(amt)) : amt.toFixed(2),
                 currency_code: currency
               },
               description: (item.name || 'VyCheckout Payment').substring(0, 127)
@@ -2246,14 +2302,13 @@ function renderPPButtons(containerId, item, onSuccess) {
 // ═══════════════════════════════════════════════
 let payCtx = null;
 
-function openPay(id, type, amount, name, currency) {
-  payCtx = { id, type, amount: parseFloat(amount), name, currency: currency || 'USD' };
-  const sym = CS(payCtx.currency);
+function openPay(item) {
+  payCtx = Object.assign({}, item, { amount: +item.amount, currency: item.currency || 'USD' });
 
   // Set text fields
-  g('m-t').textContent = name;
-  g('m-a').textContent = sym + payCtx.amount.toFixed(2);
-  g('m-s').textContent = type === 'sub' ? 'Recurring subscription' : 'One-time payment';
+  g('m-t').textContent = payCtx.name;
+  g('m-a').textContent = fmtAmt(payCtx.amount, payCtx.currency);
+  g('m-s').textContent = payCtx.type === 'sub' ? 'First payment of this subscription (automatic renewal isn\'t active yet)' : 'One-time payment';
 
   // Build modal body with a stable container div BEFORE opening overlay
   g('m-meth').innerHTML = `
@@ -2264,13 +2319,14 @@ function openPay(id, type, amount, name, currency) {
   g('pay-ovl').classList.add('open');
 
   // Wait 2 frames for DOM to fully paint, then render PayPal buttons
+  const ctx = payCtx;   // local copy: payCtx changes if the modal is closed/reopened
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      scInit('m-sc', payCtx);
-      renderPPButtons('pp-modal-container', payCtx, async (details) => {
+      scInit('m-sc', ctx);
+      renderPPButtons('pp-modal-container', ctx, async (details) => {
         closePay();
-        await recordPayment(payCtx, 'PayPal', details);
-        showReceipt(payCtx, 'PayPal');
+        const txn = await recordPayment(ctx, 'PayPal', details);
+        showReceipt(ctx, 'PayPal', txn?.id);
         setTimeout(() => loadUserData(), 800);
       });
     });
@@ -2279,7 +2335,7 @@ function openPay(id, type, amount, name, currency) {
 
 function closePay() {
   g('pay-ovl').classList.remove('open');
-  setTimeout(() => { payCtx = null; }, 300);
+  setTimeout(() => { if (!g('pay-ovl').classList.contains('open')) payCtx = null; }, 300);
 }
 
 // ─── LINK CREATED MODAL ───
@@ -2341,9 +2397,12 @@ document.addEventListener('click', e => {
   if (ovl && e.target === ovl) closeLm();
 });
 
-async function recordPayment(item, method, payerDetails) {
-  if (!currentUser) return;
-  const gross = item.amount;
+// Records a successful payment for ownerId (defaults to the logged-in user) and credits the referrer.
+// Returns the inserted transaction row (or null).
+async function recordPayment(item, method, payerDetails, ownerId) {
+  ownerId = ownerId || (currentUser && currentUser.id);
+  if (!ownerId) return null;
+  const gross = +(+item.amount).toFixed(2);
   const fee = +(gross * PLATFORM_FEE).toFixed(2);
   const net = +(gross - fee).toFixed(2);
 
@@ -2357,22 +2416,23 @@ async function recordPayment(item, method, payerDetails) {
     if (!payerName && payer?.email_address) payerName = payer.email_address;
   }
 
-  // Check referrer
-  const { data: prof } = await sb.from('profiles').select('referrer_id').eq('id', currentUser.id).single();
+  // Referral commission for the owner's referrer
+  const { data: prof } = await sb.from('profiles').select('referrer_id').eq('id', ownerId).single();
   let refAmt = 0, refId = null;
-  if (prof?.referrer_id) {
+  if (prof?.referrer_id && prof.referrer_id !== ownerId) {
     refAmt = +(gross * REFERRAL_PCT).toFixed(2);
     refId = prof.referrer_id;
-    await sb.rpc('increment_ref_balance', { p_user_id: refId, p_amount: refAmt }).catch(() => {
-      sb.from('profiles').select('balance,ref_earned').eq('id', refId).single().then(({ data: rd }) => {
-        if (rd) sb.from('profiles').update({ balance: (rd.balance||0)+refAmt, ref_earned: (rd.ref_earned||0)+refAmt }).eq('id', refId);
-      });
-    });
+    // sb.rpc resolves with { error } rather than throwing, so check it explicitly
+    const { error: rpcErr } = await sb.rpc('increment_ref_balance', { p_user_id: refId, p_amount: refAmt });
+    if (rpcErr) {
+      const { data: rd } = await sb.from('profiles').select('balance,ref_earned').eq('id', refId).single();
+      if (rd) await sb.from('profiles').update({ balance: (+rd.balance || 0) + refAmt, ref_earned: (+rd.ref_earned || 0) + refAmt }).eq('id', refId);
+    }
   }
 
   const txnRow = await sbInsert('vy_transactions', {
-    user_id:        currentUser.id,
-    source_id:      item.id,
+    user_id:        ownerId,
+    source_id:      item.id || null,
     source_type:    item.type,
     description:    item.name,
     payer_name:     payerName || null,
@@ -2387,7 +2447,7 @@ async function recordPayment(item, method, payerDetails) {
   });
 
   // Fire developer webhook if registered
-  if (currentProfile?.webhook_url) {
+  if (currentUser && ownerId === currentUser.id && currentProfile?.webhook_url) {
     try {
       fetch(currentProfile.webhook_url, {
         method: 'POST',
@@ -2409,6 +2469,7 @@ async function recordPayment(item, method, payerDetails) {
       }).catch(() => {});
     } catch(e) {}
   }
+  return txnRow;
 }
 
 // ═══════════════════════════════════════════════
@@ -2430,74 +2491,58 @@ async function initCheckout(type, id) {
   }
 
   const { data: owner } = await sb.from('profiles').select('business_name, full_name').eq('id', item.user_id).single();
-  coCtx = { type, item: { ...item, type, amount: item.amount }, owner };
-  const sym = CS(item.currency);
+  const business = owner?.business_name || owner?.full_name || 'VyCheckout';
+  const cur = item.currency || 'USD';
+  coCtx = { type, owner, item: { ...item, type, amount: +item.amount, currency: cur, business } };
   const isSub = type === 'sub';
-
   const isCustomAmt = item.custom_amount === true;
+
   g('co-card').innerHTML = `
     <div class="co-hd">
-      <div class="mer">${esc(owner?.business_name || owner?.full_name || 'VyCheckout')}</div>
+      <div class="mer">${esc(business)}</div>
       <h2>${esc(item.name)}</h2>
       ${isCustomAmt
-        ? `<div class="price" id="co-custom-display">${sym}0.00</div>
+        ? `<div class="price" id="co-custom-display">${fmtAmt(0, cur)}</div>
            <div class="co-custom-wrap">
-             <span class="co-custom-sym">${sym}</span>
+             <span class="co-custom-sym">${esc(CS(cur))}</span>
              <input type="number" id="co-custom-inp" class="co-custom-input"
-               placeholder="Enter amount" min="1" step="0.01"
-               oninput="updateCustomAmt('${item.currency||'USD'}')">
+               placeholder="Enter amount" min="1" step="${isZD(cur) ? '1' : '0.01'}"
+               oninput="updateCustomAmt('${esc(cur)}')">
            </div>`
-        : `<div class="price">${sym}${item.amount.toFixed(2)}</div>`}
-      ${isSub ? `<div class="desc">Recurring ${(item.cycle||'monthly').toLowerCase()}</div>` : ''}
+        : `<div class="price">${fmtAmt(item.amount, cur)}</div>`}
+      ${isSub ? `<div class="desc">Billed ${esc((item.cycle || 'monthly').toLowerCase())}. This payment covers the first period — automatic renewal isn't active yet.</div>` : ''}
       ${item.description ? `<div class="desc">${esc(item.description)}</div>` : ''}
       ${item.note ? `<div class="desc">${esc(item.note)}</div>` : ''}
     </div>
     <div class="co-bd">
-      ${isCustomAmt ? `<button class="ba" style="width:100%;margin-bottom:.9rem" onclick="confirmCustomAmt()">Confirm Amount & Pay</button>` : ''}
-      <div id="paypal-checkout-container" style="margin-top:.2rem;${isCustomAmt?'display:none':''}"></div>
+      ${isCustomAmt ? `<button class="ba" id="co-confirm-btn" style="width:100%;margin-bottom:.9rem" onclick="confirmCustomAmt()">Confirm Amount &amp; Pay</button>` : ''}
+      <div id="paypal-checkout-container" style="margin-top:.2rem;${isCustomAmt ? 'display:none' : ''}"></div>
       <div style="font-size:.67rem;color:var(--ink3);text-align:center;margin-top:.7rem;line-height:1.5;">🔒 Secured by PayPal · All major cards accepted</div>
     </div>`;
 
-  // Use rAF so container is fully in DOM before PayPal renders
+  // Custom-amount links render buttons only after the payer confirms an amount
+  if (!isCustomAmt) renderCheckoutButtons();
+}
+
+// Renders PayPal for the current public checkout item (coCtx.item) and records the payment for its owner.
+function renderCheckoutButtons() {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       renderPPButtons('paypal-checkout-container', coCtx.item, async (details) => {
-        const gross = item.amount;
-        const fee   = +(gross * PLATFORM_FEE).toFixed(2);
-        const net   = +(gross - fee).toFixed(2);
-        // Record transaction in Supabase
-        await sbInsert('vy_transactions', {
-          user_id:        item.user_id,
-          source_id:      item.id,
-          source_type:    type,
-          description:    item.name,
-          gross_amount:   gross,
-          net_amount:     net,
-          fee_amount:     fee,
-          payment_method: 'PayPal',
-          status:         'succeeded',
-        });
-        // Also update owner balance
-        const { data: ownerProf } = await sb.from('profiles').select('balance,total_earned').eq('id', item.user_id).single();
-        if (ownerProf) {
-          await sb.from('profiles').update({
-            balance:      (ownerProf.balance || 0) + net,
-            total_earned: (ownerProf.total_earned || 0) + net,
-            updated_at:   new Date().toISOString()
-          }).eq('id', item.user_id);
-        }
-        // Show success
+        const it = Object.assign({}, coCtx.item);
+        const txn = await recordPayment(it, 'PayPal', details, it.user_id);
         g('co-card').innerHTML = `
           <div class="co-hd" style="background:#15803d">
-            <div class="mer">VyCheckout</div>
+            <div class="mer">${esc(it.business)}</div>
             <h2>Payment Successful!</h2>
-            <div class="price">${sym}${item.amount.toFixed(2)}</div>
+            <div class="price">${fmtAmt(it.amount, it.currency)}</div>
           </div>
           <div class="co-bd" style="text-align:center;padding:2rem">
             <div style="font-size:3rem;margin-bottom:.75rem">✅</div>
             <div style="font-weight:700;margin-bottom:.35rem">Thank you!</div>
             <div style="font-size:.8rem;color:var(--ink2)">Your payment has been received. You can close this page.</div>
           </div>`;
+        showReceipt(it, 'PayPal', txn?.id);
       });
     });
   });
@@ -2546,6 +2591,7 @@ async function renderAdminDash() {
       <div class="pt">Platform Stats <span class="admin-badge">Admin</span></div>
       <div class="ps">Revenue and activity overview</div>
       <div class="sg" id="adm-stats"><div style="color:var(--ink3);padding:1rem">Loading…</div></div>
+      <div id="adm-extra"></div>
     </div>`;
 
   g('mnav-items').innerHTML = `
@@ -2581,7 +2627,7 @@ async function loadAdminWds() {
     if (w.bank_details) {
       try {
         const b = JSON.parse(w.bank_details);
-        bankInfo = Object.entries(b).filter(([,val]) => val).map(([k,val]) => `<strong>${k}:</strong> ${val}`).join(' · ');
+        bankInfo = Object.entries(b).filter(([,val]) => val).map(([k,val]) => `<strong>${esc(k)}:</strong> ${esc(String(val))}`).join(' · ');
       } catch(e) {}
     }
     return `<div class="wr-item">
@@ -2589,7 +2635,7 @@ async function loadAdminWds() {
         <div>
           <div class="wr-user">${esc(w.user_name||'Unknown')} <span style="font-weight:400;color:var(--ink2);font-size:.71rem">${esc(w.user_email||'')}</span></div>
           <div class="wr-meta">
-            ${fd(w.created_at)} · ${w.method} · ${esc(w.country||'')}
+            ${fd(w.created_at)} · ${esc(w.method||'')} · ${esc(w.country||'')}
             ${w.destination ? ` · <span style="font-family:monospace;font-size:.71rem">${esc(w.destination)}</span>` : ''}
             ${bankInfo ? `<br><span style="font-size:.69rem;color:var(--ink3)">${bankInfo}</span>` : ''}
             ${w.notes ? `<br><em style="font-size:.71rem;color:var(--ink2)">${esc(w.notes)}</em>` : ''}
@@ -2601,22 +2647,21 @@ async function loadAdminWds() {
         </div>
       </div>
       <div class="wr-actions">
-        ${w.status==='pending' ? `<button class="btn-approve" onclick="wdAction('${w.id}','approved',null)">✓ Approve</button><button class="btn-reject" onclick="wdAction('${w.id}','rejected',null)">✕ Reject</button>` : ''}
-        ${w.status==='approved' ? `<button class="btn-mark-paid" onclick="wdAction('${w.id}','completed',null)">✓ Mark as Paid</button><button class="btn-reject" onclick="wdAction('${w.id}','rejected',null)">✕ Reject</button>` : ''}
+        ${w.status==='pending' ? `<button class="btn-approve" onclick="wdAction('${w.id}','approved',this)">✓ Approve</button><button class="btn-reject" onclick="wdAction('${w.id}','rejected',this)">✕ Reject</button>` : ''}
+        ${w.status==='approved' ? `<button class="btn-mark-paid" onclick="wdAction('${w.id}','completed',this)">✓ Mark as Paid</button><button class="btn-reject" onclick="wdAction('${w.id}','rejected',this)">✕ Reject</button>` : ''}
         ${w.status==='completed'||w.status==='rejected' ? '<span style="font-size:.72rem;color:var(--ink3)">No further actions</span>' : ''}
       </div>
     </div>`;
   }).join('');
 }
 
-async function wdAction(wdId, newStatus, note) {
-  const btn = event?.target;
+async function wdAction(wdId, newStatus, btn) {
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
 
   const { error } = await sb.rpc('admin_update_withdrawal', {
     p_wd_id:  wdId,
     p_status: newStatus,
-    p_note:   note || null
+    p_note:   null
   });
 
   if (error) {
@@ -2638,6 +2683,7 @@ async function loadAdminUsers() {
 
   el.innerHTML = `<div style="font-size:.78rem;font-weight:600;color:var(--ink2);margin-bottom:.75rem;">Total: <strong style="color:var(--ink)">${users.length}</strong> users</div>` +
     users.map(u => {
+      _adminUsers[u.id] = u;
       const susp = u.suspended || false;
       return `<div class="user-row" style="${susp?'opacity:.6':''}">
         <div class="user-row-info">
@@ -2647,7 +2693,7 @@ async function loadAdminUsers() {
         </div>
         <div class="user-row-actions">
           <button style="border-color:${susp?'var(--grn)':'var(--gld)'};color:${susp?'var(--grn)':'var(--gld)'}" onclick="adminSuspend('${u.id}',${!susp})">${susp?'✓ Unsuspend':'⊘ Suspend'}</button>
-          <button style="border-color:var(--acc);color:var(--acc)" onclick="adminAdjustBalance('${u.id}','${esc(u.full_name||u.email)}',${u.balance||0})">💰 Adjust Balance</button>
+          <button style="border-color:var(--acc);color:var(--acc)" onclick="adminAdjustBalance('${u.id}')">💰 Adjust Balance</button>
           <button style="border-color:var(--red);color:var(--red)" onclick="adminDeleteUser('${u.id}')">✕ Delete</button>
         </div>
       </div>`;
@@ -2660,8 +2706,11 @@ async function adminSuspend(userId, suspend) {
   await loadAdminUsers();
 }
 
-async function adminAdjustBalance(userId, name, currentBal) {
-  const newBal = prompt(`Adjust balance for ${name}\nCurrent: $${currentBal.toFixed(2)}\n\nEnter new balance amount:`);
+const _adminUsers = {};
+async function adminAdjustBalance(userId) {
+  const u = _adminUsers[userId] || {};
+  const name = u.full_name || u.email || 'this user';
+  const newBal = prompt(`Adjust balance for ${name}\nCurrent: ${fm(u.balance || 0)}\n\nEnter new balance amount:`);
   if (newBal === null) return;
   const val = parseFloat(newBal);
   if (isNaN(val) || val < 0) { toast('Invalid amount', 'er'); return; }
@@ -2673,14 +2722,17 @@ async function adminAdjustBalance(userId, name, currentBal) {
 async function adminDeleteUser(userId) {
   if (!confirm('Delete this user and ALL their data? This cannot be undone.')) return;
   // Delete all related data
+  // Child rows first, then the profile (deleting them together can hit foreign-key errors)
   await Promise.all([
     sb.from('vy_collections').delete().eq('user_id', userId),
     sb.from('vy_subscriptions').delete().eq('user_id', userId),
     sb.from('vy_pay_links').delete().eq('user_id', userId),
     sb.from('vy_transactions').delete().eq('user_id', userId),
     sb.from('vy_withdrawals').delete().eq('user_id', userId),
-    sb.from('profiles').delete().eq('id', userId),
+    sb.from('vy_follows').delete().eq('follower_id', userId),
+    sb.from('vy_follows').delete().eq('following_id', userId),
   ]);
+  await sb.from('profiles').delete().eq('id', userId);
   toast('User deleted', 'ok');
   await loadAdminUsers();
 }
@@ -2711,7 +2763,7 @@ async function loadAdminStats() {
   const el = g('adm-stats'); if (!el) return;
   const { data: txns } = await sb.from('vy_transactions').select('gross_amount,net_amount,fee_amount,created_at').eq('status', 'succeeded');
   const { data: wds } = await sb.from('vy_withdrawals').select('amount,status');
-  const { data: users } = await sb.from('profiles').select('id');
+  const { data: users } = await sb.from('profiles').select('id,referrer_id,api_key');
   const { data: cols } = await sb.from('vy_collections').select('id');
   const { data: subs } = await sb.from('vy_subscriptions').select('id');
   const { data: lnks } = await sb.from('vy_pay_links').select('id');
@@ -2733,11 +2785,11 @@ async function loadAdminStats() {
   // Monthly breakdown (last 6 months)
   const months = [];
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(); d.setMonth(d.getMonth() - i);
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
     const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
-    const end = new Date(d.getFullYear(), d.getMonth()+1, 0).toISOString();
-    const mFees = t.filter(x => x.created_at >= start && x.created_at <= end).reduce((a,x) => a+(x.fee_amount||0), 0);
+    const end = new Date(d.getFullYear(), d.getMonth()+1, 1).toISOString();
+    const mFees = t.filter(x => new Date(x.created_at) >= new Date(start) && new Date(x.created_at) < new Date(end)).reduce((a,x) => a+(x.fee_amount||0), 0);
     months.push({ label, fees: mFees });
   }
   const maxFee = Math.max(...months.map(m => m.fees), 1);
@@ -2787,8 +2839,8 @@ async function loadAdminStats() {
   }).join('');
   earnersDiv.innerHTML = earnersLabel + '<div style="overflow-x:auto"><table style="width:100%;font-size:.75rem;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:.4rem .6rem;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--bord)">User</th><th style="text-align:right;padding:.4rem .6rem;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--bord)">Earned</th><th style="text-align:right;padding:.4rem .6rem;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--bord)">Balance</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 
-  el.insertAdjacentElement('afterend', earnersDiv);
-  el.insertAdjacentElement('afterend', chartDiv);
+  const extra = g('adm-extra');
+  if (extra) { extra.innerHTML = ''; extra.appendChild(chartDiv); extra.appendChild(earnersDiv); }
 }
 
 // ═══════════════════════════════════════════════
@@ -2841,93 +2893,61 @@ function _showPreview(boxId, containerId, titleId, nameVal, amtVal, curVal, sour
   if (!box) return;
 
   const amt = parseFloat(amtVal);
+  const cur = (curVal || 'USD').toUpperCase();
   if (!nameVal || !amt || amt < 0.5) {
     box.style.display = 'none';
     return;
   }
 
-  // Show the box
   box.style.display = '';
-  const sym = CS(curVal || 'USD');
   const titleEl = document.getElementById(titleId);
-  if (titleEl) titleEl.textContent = 'Collect ' + sym + amt.toFixed(2);
+  if (titleEl) titleEl.textContent = 'Collect ' + fmtAmt(amt, cur);
+
+  const item = {
+    id: '_preview_' + sourceType, name: nameVal, amount: amt, currency: cur, type: sourceType,
+    business: currentProfile?.business_name || currentProfile?.full_name || ''
+  };
+
+  // Keep the card field (and whatever is typed in it) — just update what it will charge.
+  const scId = { col: 'nc-sc', sub: 'ns-sc', lnk: 'nl-sc' }[sourceType];
+  const cardLive = _SE[scId] && document.getElementById(scId)?.querySelector('iframe');
+  if (cardLive) _SE[scId].item = Object.assign({}, item);
 
   // Debounce the PayPal render so it only fires 600ms after the user stops typing
   clearTimeout(_previewTimer);
   _previewTimer = setTimeout(function() {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    // Build a fake item object for renderPPButtons
-    const item = {
-      id:       '_preview_' + sourceType,
-      name:     nameVal,
-      amount:   amt,
-      currency: (curVal || 'USD').toUpperCase(),
-      type:     sourceType
-    };
-
-    // Init Stripe card alongside PayPal
-    const scId = containerId.replace('nc-pp-container','nc-sc').replace('ns-pp-container','ns-sc').replace('nl-pp-container','nl-sc');
-    scInit(scId, item);
+    if (!document.getElementById(containerId)) return;
+    if (!cardLive) scInit(scId, item);
     renderPPButtons(containerId, item, async function(details) {
-      // On payment approved: save the item to DB then record the transaction
-      const uid = currentUser && currentUser.id;
-      if (!uid) { toast('Please log in to accept payments', 'er'); return; }
-
-      let savedId = null;
-
-      if (sourceType === 'col') {
-        const desc = (document.getElementById('nc-d') || {}).value || '';
-        const row = await sbInsert('vy_collections', {
-          user_id: uid, name: nameVal, amount: amt,
-          currency: (curVal || 'USD').toUpperCase(), description: desc
-        });
-        if (row) savedId = row.id;
-      } else if (sourceType === 'sub') {
-        const desc = (document.getElementById('ns-d') || {}).value || '';
-        const cycle = (document.getElementById('ns-cy') || {}).value || 'MONTHLY';
-        const row = await sbInsert('vy_subscriptions', {
-          user_id: uid, name: nameVal, amount: amt,
-          currency: (curVal || 'USD').toUpperCase(),
-          description: desc, cycle: cycle
-        });
-        if (row) savedId = row.id;
-      } else if (sourceType === 'lnk') {
-        const note    = (document.getElementById('nl-no') || {}).value || '';
-        const expDays = parseInt((document.getElementById('nl-e') || {}).value || '0');
-        const expires_at = expDays ? new Date(Date.now() + expDays * 86400000).toISOString() : null;
-        const row = await sbInsert('vy_pay_links', {
-          user_id: uid, name: nameVal, amount: amt,
-          currency: (curVal || 'USD').toUpperCase(),
-          note: note, expires_at: expires_at
-        });
-        if (row) savedId = row.id;
-      }
-
-      // Record the transaction
-      const gross = amt;
-      const fee   = +(gross * PLATFORM_FEE).toFixed(2);
-      const net   = +(gross - fee).toFixed(2);
-      await sbInsert('vy_transactions', {
-        user_id:        uid,
-        source_id:      savedId,
-        source_type:    sourceType,
-        description:    nameVal,
-        gross_amount:   gross,
-        net_amount:     net,
-        fee_amount:     fee,
-        payment_method: 'PayPal',
-        status:         'succeeded'
-      });
-
-      toast('Payment of ' + sym + amt.toFixed(2) + ' received ✓', 'ok');
-      // Refresh data and navigate to the appropriate list
-      await loadUserData();
-      const panelMap = { col: 'p-cols', sub: 'p-subs', lnk: 'p-lnks' };
-      spU(panelMap[sourceType], null);
+      // Payment captured: save the item (if possible), then record the transaction against it.
+      const saved = (await savePreviewItem(item)) || Object.assign({}, item, { id: null });
+      const txn = await recordPayment(saved, 'PayPal', details);
+      await afterPreviewPaid(saved, 'PayPal', txn);
     });
   }, 600);
+}
+
+// Saves the collection / plan / link from the create form for a payment taken in its preview.
+async function savePreviewItem(item) {
+  if (!currentUser) { toast('Please log in to accept payments', 'er'); return null; }
+  const base = { user_id: currentUser.id, name: item.name, amount: item.amount, currency: item.currency };
+  let row = null;
+  if (item.type === 'col') {
+    row = await sbInsert('vy_collections', Object.assign(base, { description: gi('nc-d') }));
+  } else if (item.type === 'sub') {
+    row = await sbInsert('vy_subscriptions', Object.assign(base, { description: gi('ns-d'), cycle: gi('ns-cy') || 'MONTHLY' }));
+  } else if (item.type === 'lnk') {
+    const d = parseInt(gi('nl-e') || '0');
+    row = await sbInsert('vy_pay_links', Object.assign(base, { note: gi('nl-no'), expires_at: d ? new Date(Date.now() + d * 86400000).toISOString() : null }));
+  }
+  return row ? Object.assign({}, item, { id: row.id }) : null;
+}
+
+async function afterPreviewPaid(saved, method, txn) {
+  toast('Payment of ' + fmtAmt(saved.amount, saved.currency) + ' received ✓', 'ok');
+  showReceipt(saved, method, txn?.id);
+  await loadUserData();
+  quickNav({ col: 'p-cols', sub: 'p-subs', lnk: 'p-lnks' }[saved.type]);
 }
 
 function ncPreview() {
@@ -2963,9 +2983,20 @@ function gi(id) { return (g(id)?.value || '').trim(); }
 function sv(id, val) { const el = g(id); if (el) el.textContent = val; }
 function fm(n)  { return '$' + (+n || 0).toFixed(2); }
 function fd(ts) { if (!ts) return '—'; return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
-function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function tog(id, show) { g(id)?.classList.toggle('hidden', !show); }
-function cpEl(id) { navigator.clipboard.writeText(g(id).value); toast('Copied! 📋'); }
+function cpEl(id) { copyText(g(id)?.value || ''); }
+function copyText(text) {
+  if (!text) return;
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); toast('Copied! 📋');
+  };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast('Copied! 📋')).catch(fallback);
+  else fallback();
+}
 function empt(ic, msg) { return `<div class="empty" style="grid-column:1/-1"><div class="empty-ic">${ic}</div><p>${msg}</p></div>`; }
 function coUrl(type, id) { return location.origin + location.pathname + '?pay=' + type + ':' + id; }
 function genRefCode() { return Math.random().toString(36).slice(2,8).toUpperCase(); }
@@ -2988,121 +3019,73 @@ function toast(msg, cls = '') {
   clearTimeout(_tt); _tt = setTimeout(() => t.className = 'toast', 4200);
 }
 
-// Counter animation
-(function animateCounter() {
-  const el = g('txn-counter-num'); if (!el) return;
-  let n = 80000000; const target = 100000000;
-  const step = Math.ceil((target - n) / 80);
-  const t = setInterval(() => {
-    n = Math.min(n + step, target);
-    el.textContent = n.toLocaleString() + '+';
-    if (n >= target) clearInterval(t);
-  }, 18);
-})();
-
 // ═══════════════════════════════════════════════
 // BOOT — Supabase session restore
 // ═══════════════════════════════════════════════
-(async function boot() {
+async function boot() {
   const params = new URLSearchParams(location.search);
+  const hideLoader = () => { g('loading-screen').style.display = 'none'; };
 
-  // Password reset redirect
+  // Restore the session first so every route (checkout, profile, referral) knows who is logged in.
+  const { data: { session } } = await sb.auth.getSession();
+
+  // Password reset link → new-password form (Supabase reads the token from the URL)
   if (params.get('reset') === '1') {
-    // Supabase handles the token in the URL hash automatically
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) {
-      // Show a change password prompt
-      const newPass = prompt('Enter your new password (8+ characters):');
-      if (newPass && newPass.length >= 8) {
-        const { error } = await sb.auth.updateUser({ password: newPass });
-        if (error) { toast('Error: ' + error.message, 'er'); }
-        else { toast('Password updated successfully! ✓', 'ok'); }
-      }
-    }
-  }
-
-  // Password reset redirect
-  const resetToken = params.get('reset');
-  if (resetToken === '1') {
-    g('loading-screen').style.display = 'none';
-    showView('new-password');
-    return;
+    hideLoader(); showView('new-password'); listenAuth(); return;
   }
 
   // Public checkout link
   const pay = params.get('pay');
   if (pay) {
     const [type, id] = pay.split(':');
-    if (type && id) { g('loading-screen').style.display = 'none'; await initCheckout(type, id); return; }
+    if (type && id) {
+      if (session?.user) await afterLogin(session.user, { quiet: true });
+      hideLoader(); await initCheckout(type, id); listenAuth(); return;
+    }
   }
 
   // Public profile page
   const uCode = params.get('u');
   if (uCode) {
-    g('loading-screen').style.display = 'none';
-    await initProfile(uCode);
-    return;
+    if (session?.user) await afterLogin(session.user, { quiet: true });
+    hideLoader(); await initProfile(uCode); listenAuth(); return;
   }
 
-  // Referral signup
+  // Referral link: only meaningful for people who don't have an account yet
   const ref = params.get('ref');
-  if (ref) {
+  if (ref && !session?.user) {
     localStorage.setItem('vy_pending_ref', ref.toUpperCase());
     const inp = g('su-r'); if (inp) inp.value = ref.toUpperCase();
     const note = g('ref-note'); if (note) note.classList.remove('hidden');
-    g('loading-screen').style.display = 'none';
-    showView('signup'); return;
+    hideLoader(); showView('signup'); updateNav(); listenAuth(); return;
   }
 
-  // Restore Supabase session
-  const { data: { session } } = await sb.auth.getSession();
-  g('loading-screen').style.display = 'none';
-
+  hideLoader();
   if (session?.user) {
     await afterLogin(session.user);
   } else {
     updateNav();
     showView('landing');
   }
+  listenAuth();
+}
+// Start only after every <script> block on the page has been parsed — functions like initProfile,
+// scInit and loadApiKey live in later blocks and were sometimes undefined when boot ran.
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
 
-  // Listen for auth changes (token refresh etc.)
-  sb.auth.onAuthStateChange(async (event, session) => {
-    // If a new user signed in and we have a pending referral code, apply it
-    if ((event === 'SIGNED_IN') && session?.user) {
-      const pendingRef = localStorage.getItem('vy_pending_ref');
-      if (pendingRef) {
-        const { data: refUser } = await sb.from('profiles').select('id').eq('ref_code', pendingRef).single();
-        if (refUser) {
-          // Check profile doesn't already have a referrer
-          const { data: myProf } = await sb.from('profiles').select('referrer_id').eq('id', session.user.id).single();
-          if (myProf && !myProf.referrer_id) {
-            await sb.from('profiles').update({ referrer_id: refUser.id }).eq('id', session.user.id);
-          }
-        }
-        localStorage.removeItem('vy_pending_ref');
-      }
-    }
+// Handles sign-ins that don't go through doLogin/doSignup (e.g. returning from Google) and sign-outs.
+function listenAuth() {
+  sb.auth.onAuthStateChange((event, session) => {
+    // Supabase recommends not awaiting its own calls inside this callback, so defer the work.
     if (event === 'SIGNED_IN' && session?.user && !currentUser) {
-      // Check if there's a pending signup with referrerId
-      let pendingRefId = null;
-      const pendingSignup = localStorage.getItem('vy_pending_signup');
-      if (pendingSignup) {
-        try {
-          const ps = JSON.parse(pendingSignup);
-          pendingRefId = ps.referrerId || null;
-          localStorage.removeItem('vy_pending_signup');
-        } catch(e) {}
-      }
-      await afterLogin(session.user, pendingRefId);
+      setTimeout(() => { if (!currentUser) afterLogin(session.user, { welcome: true }); }, 0);
     } else if (event === 'SIGNED_OUT') {
       currentUser = null; currentProfile = null; isAdmin = false;
       updateNav(); showView('landing');
     }
   });
-})();
-</script>
-
-<script>
+}
 </script>
 
 
@@ -3162,7 +3145,7 @@ function toast(msg, cls = '') {
   </div>
   <div class="pol-footer">
     © 2025 VyCheckout &nbsp;·&nbsp;
-    <span href="/terms" target="_blank">Terms of Service</span> &nbsp;·&nbsp;
+    <span onclick="showPolicy('terms')">Terms of Service</span> &nbsp;·&nbsp;
     <span onclick="closePolicy()">Back to App</span>
   </div>
 </div>
@@ -3238,7 +3221,7 @@ function toast(msg, cls = '') {
   </div>
   <div class="pol-footer">
     © 2025 VyCheckout &nbsp;·&nbsp;
-    <span href="/privacy" target="_blank">Privacy Policy</span> &nbsp;·&nbsp;
+    <span onclick="showPolicy('privacy')">Privacy Policy</span> &nbsp;·&nbsp;
     <span onclick="closePolicy()">Back to App</span>
   </div>
 </div>
@@ -3256,7 +3239,17 @@ function closePolicy() {
   document.getElementById('pol-terms').classList.remove('open');
   document.body.style.overflow = '';
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closePolicy(); });
+// Escape closes whichever popup is on top
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const isOpen = id => !!g(id)?.classList.contains('open');
+  if (isOpen('receipt-modal')) return closeReceipt();
+  if (isOpen('qr-modal'))      return closeQR();
+  if (isOpen('pay-ovl'))       return closePay();
+  if (isOpen('lm-ovl'))        return closeLm();
+  if (isOpen('ep-ovl'))        return closeEditProfile();
+  closePolicy();
+});
 </script>
 
 <!-- ══ PUBLIC PROFILE VIEW ══ -->
@@ -3348,6 +3341,7 @@ async function initProfile(refCode) {
   }
 
   _igProfileId = prof.id;
+  window._currentProfileCode = prof.ref_code; // Share button shares THIS profile, not the viewer's
 
   // Set profile info
   const av = prof.avatar || '👤';
@@ -3358,7 +3352,7 @@ async function initProfile(refCode) {
   const bioEl = document.getElementById('ig-bio-text');
   if (bioEl) bioEl.textContent = prof.bio || '';
   const rl = document.getElementById('ig-ref-link');
-  if (rl) rl.href = '/?ref=' + prof.ref_code;
+  if (rl) rl.href = location.pathname + '?ref=' + encodeURIComponent(prof.ref_code);
 
   // Load counts in parallel
   const [colsRes, lnksRes, followersRes, followingRes] = await Promise.all([
@@ -3409,16 +3403,20 @@ async function initProfile(refCode) {
   }
 
   items.forEach(function(item) {
-    const sym = CS(item.currency || 'USD');
-    const url = '/?pay=' + item._type + ':' + item.id;
+    const url = coUrl(item._type, item.id);
+    const isCol = item._type === 'col';
+    const sub = item.description || item.note || '';
     const card = document.createElement('div');
     card.className = 'ig-card';
     card.innerHTML =
-      '<div class="ig-card-name">' + esc(item.name) + '</div>' +
-      '<div class="ig-card-price">' + sym + parseFloat(item.amount).toFixed(2) + '</div>' +
-      (item.description ? '<div class="ig-card-desc">' + esc(item.description) + '</div>' : '') +
-      '<button class="ig-card-btn">Pay</button>';
-    card.querySelector('.ig-card-btn').onclick = function() { location.href = url; };
+      '<div class="ig-card-icon">' + (isCol ? '📋' : '🔗') + '</div>' +
+      '<div class="ig-card-info">' +
+        '<div class="ig-card-name">' + esc(item.name) + '</div>' +
+        (sub ? '<div class="ig-card-desc">' + esc(sub) + '</div>' : '') +
+        '<span class="ig-card-badge ' + (isCol ? 'col' : 'lnk') + '">' + (isCol ? 'Collection' : 'Pay Link') + '</span>' +
+      '</div>' +
+      '<div class="ig-card-amt">' + (item.custom_amount ? 'Any amount' : fmtAmt(item.amount, item.currency)) + '</div>';
+    card.onclick = function() { location.href = url; };
     grid.appendChild(card);
   });
 }
@@ -3531,8 +3529,6 @@ async function saveProfile() {
   }
 }
 
-// Store profile code when loading public profile
-const _origInitProfile = initProfile;
 </script>
 
 <script>
@@ -3594,7 +3590,8 @@ async function scPay(id) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'create_payment_intent',
-        amount: Math.round(parseFloat(sd.item.amount) * 100),
+        // Stripe wants the smallest currency unit: cents for USD, but whole yen for JPY
+        amount: isZD(sd.item.currency) ? Math.round(+sd.item.amount) : Math.round(+sd.item.amount * 100),
         currency: (sd.item.currency || 'USD').toLowerCase(),
         description: sd.item.name || 'VyCheckout payment'
       })
@@ -3616,13 +3613,20 @@ async function scPay(id) {
     if (confErr) throw new Error(confErr.message);
 
     if (paymentIntent && paymentIntent.status === 'succeeded') {
-      await recordPayment(sd.item, 'Stripe');
-      const sym = CS(sd.item.currency || 'USD');
-      toast('Payment of ' + sym + parseFloat(sd.item.amount).toFixed(2) + ' received ✓', 'ok');
       try { sd.card.clear(); } catch(e) {}
-      const modal = document.getElementById('pay-modal');
-      if (modal && modal.classList.contains('open')) closePay();
-      setTimeout(function() { loadUserData(); }, 800);
+      if (String(sd.item.id || '').startsWith('_preview_')) {
+        // Paid from a create-form preview: save the item first, like the PayPal preview does
+        const saved = (await savePreviewItem(sd.item)) || Object.assign({}, sd.item, { id: null });
+        const txn = await recordPayment(saved, 'Stripe');
+        await afterPreviewPaid(saved, 'Stripe', txn);
+      } else {
+        const item = Object.assign({}, sd.item);
+        const txn = await recordPayment(item, 'Stripe');
+        if (g('pay-ovl')?.classList.contains('open')) closePay();
+        toast('Payment of ' + fmtAmt(item.amount, item.currency) + ' received ✓', 'ok');
+        showReceipt(item, 'Stripe', txn?.id);
+        setTimeout(function() { loadUserData(); }, 800);
+      }
     }
   } catch(e) {
     if (err) err.textContent = e.message;
@@ -3647,12 +3651,12 @@ async function generateApiKey() {
   crypto.getRandomValues(arr);
   const key = 'vy_' + Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
 
-  // Save hashed key to profile (store full key only in browser for display)
+  // NOTE: the key is stored as-is for now; hash it server-side once the Worker backend is in place
   const { error } = await sb.from('profiles')
     .update({ api_key: key, api_key_created: new Date().toISOString() })
     .eq('id', currentUser.id);
 
-  if (btn) { btn.disabled = false; btn.textContent = 'Generate New Key'; }
+  if (btn) { btn.disabled = false; btn.textContent = '+ New Key'; }
 
   if (error) {
     toast('Failed: ' + error.message, 'er');
@@ -3666,6 +3670,8 @@ async function generateApiKey() {
     valEl.dataset.fullKey = key;
   }
   if (copyEl) copyEl.style.display = '';
+  const revokeBtn = document.getElementById('api-key-revoke');
+  if (revokeBtn) revokeBtn.style.display = '';
   if (currentProfile) currentProfile.api_key = key;
   toast('✓ API key generated! Copy it now.', 'ok');
 }
@@ -3687,8 +3693,10 @@ async function loadApiKey() {
     // Store full key in data attribute for copy
     valEl.dataset.fullKey = key;
   } else {
-    valEl.textContent = 'No API key yet — click Generate New Key';
+    valEl.textContent = 'No API key yet — click + New Key';
     if (copyEl) copyEl.style.display = 'none';
+    const revokeBtn = document.getElementById('api-key-revoke');
+    if (revokeBtn) revokeBtn.style.display = 'none';
   }
   // Load API usage stats
   loadApiStats();
@@ -3719,6 +3727,35 @@ async function revokeApiKey() {
   if (copyEl) copyEl.style.display = 'none';
   if (revokeEl) revokeEl.style.display = 'none';
   toast('API key revoked ✓', 'ok');
+}
+
+// Follower count on the home profile card
+async function loadFollowerCount() {
+  if (!currentUser) return;
+  const { count } = await sb.from('vy_follows')
+    .select('*', { count: 'exact', head: true }).eq('following_id', currentUser.id);
+  sv('pc-followers', String(count || 0));
+}
+
+// Developer webhook URL (profiles.webhook_url)
+async function loadWebhookUrl() {
+  if (!currentUser) return;
+  const inp = g('webhook-url-inp'); if (!inp) return;
+  const { data } = await sb.from('profiles').select('webhook_url').eq('id', currentUser.id).single();
+  inp.value = data?.webhook_url || '';
+  if (currentProfile) currentProfile.webhook_url = data?.webhook_url || null;
+}
+
+async function saveWebhookUrl() {
+  if (!currentUser) return;
+  const inp = g('webhook-url-inp'); const status = g('webhook-url-status');
+  const url = (inp?.value || '').trim();
+  if (url && !/^https:\/\/[^\s]+$/i.test(url)) { toast('Webhook URL must start with https://', 'er'); return; }
+  const { error } = await sb.from('profiles').update({ webhook_url: url || null }).eq('id', currentUser.id);
+  if (error) { toast('Failed: ' + error.message, 'er'); return; }
+  if (currentProfile) currentProfile.webhook_url = url || null;
+  if (status) status.textContent = url ? '✓ Saved' : 'Webhook removed';
+  toast(url ? 'Webhook saved ✓' : 'Webhook removed', 'ok');
 }
 
 function cpApiKey() {
@@ -3842,78 +3879,28 @@ async function notify(type, data) {
 // ══ CUSTOM AMOUNT CHECKOUT ══
 function updateCustomAmt(currency) {
   const val = parseFloat(document.getElementById('co-custom-inp')?.value || 0);
-  const sym = CS(currency);
   const display = document.getElementById('co-custom-display');
-  if (display) display.textContent = sym + (isNaN(val) ? '0.00' : val.toFixed(2));
-}
-
-function toggleColCustomAmt() {
-  const isCustom = document.getElementById('nc-custom-amt')?.checked;
-  const wrap = document.getElementById('nc-amt-wrap');
-  if (wrap) wrap.style.display = isCustom ? 'none' : '';
-  if (isCustom) { const inp = document.getElementById('nc-a'); if(inp) inp.value = ''; }
-  ncPreview();
-}
-
-function toggleCustomAmt() {
-  const isCustom = document.getElementById('nl-custom-amt')?.checked;
-  const amtSection = document.getElementById('nl-amt-section');
-  const noAmtSection = document.getElementById('nl-noamt-section');
-  if (amtSection) amtSection.style.display = isCustom ? 'none' : '';
-  if (noAmtSection) noAmtSection.style.display = isCustom ? '' : 'none';
-  // Clear amount if switching to custom
-  if (isCustom) {
-    const inp = document.getElementById('nl-a');
-    if (inp) inp.value = '';
-  }
-  nlPreview();
+  if (display) display.textContent = fmtAmt(isNaN(val) ? 0 : val, currency);
 }
 
 function confirmCustomAmt() {
   const inp = document.getElementById('co-custom-inp');
   const val = parseFloat(inp?.value || 0);
   if (!val || val < 1) { toast('Please enter an amount of at least 1', 'er'); inp?.focus(); return; }
+  if (!coCtx) return;
 
-  // Update coCtx with custom amount
-  if (coCtx) coCtx.item.amount = val;
+  const cur = coCtx.item.currency;
+  coCtx.item.amount = isZD(cur) ? Math.round(val) : +val.toFixed(2);
 
-  // Hide the confirm button and input, show PayPal
+  // Hide the input and confirm button, show PayPal
   inp.closest('.co-custom-wrap').style.display = 'none';
-  inp.closest('.co-bd').querySelector('button')?.style && (inp.closest('.co-bd').querySelector('button').style.display = 'none');
+  const cb = document.getElementById('co-confirm-btn'); if (cb) cb.style.display = 'none';
   document.getElementById('paypal-checkout-container').style.display = '';
-
-  // Update displayed price
-  const sym = CS(coCtx?.item?.currency || 'USD');
   const display = document.getElementById('co-custom-display');
-  if (display) display.textContent = sym + val.toFixed(2);
+  if (display) display.textContent = fmtAmt(coCtx.item.amount, cur);
 
-  // Render PayPal with custom amount
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      renderPPButtons('paypal-checkout-container', coCtx.item, async (details) => {
-        const gross = val;
-        const fee = +(gross * PLATFORM_FEE).toFixed(2);
-        const net = +(gross - fee).toFixed(2);
-        const item = coCtx.item;
-        let payerName = '';
-        try {
-          const payer = details?.payer || details;
-          payerName = ((payer?.name?.given_name||'') + ' ' + (payer?.name?.surname||'')).trim();
-        } catch(e) {}
-        await sbInsert('vy_transactions', {
-          user_id: item.user_id, source_id: item.id, source_type: 'lnk',
-          description: item.name, payer_name: payerName || null,
-          gross_amount: gross, net_amount: net, fee_amount: fee,
-          payment_method: 'PayPal', status: 'succeeded'
-        });
-        // Credit owner balance
-        const { data: prof } = await sb.from('profiles').select('balance,total_earned').eq('id', item.user_id).single();
-        if (prof) await sb.from('profiles').update({ balance: (prof.balance||0)+net, total_earned: (prof.total_earned||0)+gross }).eq('id', item.user_id);
-        showReceipt(coCtx.item, 'PayPal');
-        toast('Payment of ' + sym + gross.toFixed(2) + ' sent! ✓', 'ok');
-      });
-    });
-  });
+  // Same path as fixed-price checkout: records with the right source type, net amount and referral
+  renderCheckoutButtons();
 }
 </script>
 </body>
