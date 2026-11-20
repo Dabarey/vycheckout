@@ -4,12 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>VyCheckout — Get Paid Instantly</title>
-<!-- Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <!-- PayPal: loaded dynamically so currency can be set per-payment -->
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>window.__PP_CID='AR1RkGACuxqHKQ0dKzFlCFRXRU5oyVX1lGRQurw_PAYFjItOtl1mR8-DvMykAnB8Uhp9pd1l46Ml42uW';</script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -636,6 +633,18 @@ tbody tr:hover td{background:var(--bg);}
   #receipt-modal{position:absolute;inset:0;background:#fff;}
   .receipt-footer{display:none!important;}
 }
+
+.home-stat-sub{font-size:.6rem;color:var(--ink3);margin-top:.15rem;line-height:1.3;}
+.fee-note{font-size:.72rem;color:var(--ink2);margin:-.3rem 0 .8rem;}
+.human-box{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:950;}
+.co-fields{display:grid;gap:.55rem;margin-bottom:.9rem;}
+.co-fields input{width:100%;padding:.6rem .75rem;border:1.5px solid var(--bord);border-radius:8px;font-size:.85rem;background:var(--surf);color:var(--ink);}
+.acct-sec{background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1rem;max-width:560px;}
+.acct-sec h3{font-size:.86rem;font-weight:700;margin-bottom:.6rem;}
+.acct-sec p{font-size:.76rem;color:var(--ink2);margin-bottom:.7rem;line-height:1.5;}
+.acct-row{display:flex;align-items:center;justify-content:space-between;gap:.6rem;font-size:.8rem;}
+.danger-sec{border-color:rgba(220,38,38,.35);}
+.btn-danger{background:var(--red);color:#fff;border:none;border-radius:8px;padding:.55rem 1rem;font-weight:600;font-size:.78rem;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -750,7 +759,7 @@ tbody tr:hover td{background:var(--bg);}
   <div class="lp-section">
     <div class="lp-cta-box">
       <div class="lp-cta-title">Ready to get paid?</div>
-      <div class="lp-cta-sub">Join thousands of creators and businesses worldwide</div>
+      <div class="lp-cta-sub">Create payment links in minutes. We keep <span class="fee-pct">19%</span> of each payment — no monthly fees.</div>
       <button class="lp-btn-gold" onclick="showView('signup')">Create free account →</button>
       <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:10px;">Free account · No monthly fees</div>
     </div>
@@ -761,7 +770,7 @@ tbody tr:hover td{background:var(--bg);}
     <div class="ft-links">
       <a onclick="showPolicy('privacy')">Privacy Policy</a>
       <a onclick="showPolicy('terms')">Terms of Service</a>
-      <a href="/docs" target="_blank" style="color:var(--gld)">Docs</a>
+      <a onclick="showView('signup')" style="color:var(--gld)">API for developers</a>
       <a href="mailto:support@vycheckout.com">Contact</a>
     </div>
     <div class="ft-copy">© 2025 VyCheckout. All rights reserved.</div>
@@ -786,6 +795,7 @@ tbody tr:hover td{background:var(--bg);}
       <div class="fg"><label>Password</label><input type="password" id="su-p" placeholder="8+ characters" autocomplete="new-password"></div>
       <div class="fg"><label>Business / Brand</label><input type="text" id="su-b" placeholder="Your store name"></div>
       <div class="fg"><label>Referral Code (optional)</label><input type="text" id="su-r" placeholder="e.g. JANE3K2" style="text-transform:uppercase"></div>
+      <div class="fee-note" style="margin:0 0 .7rem">Free to join. When you get paid, VyCheckout keeps <strong class="fee-pct">19%</strong> and you keep the rest. New payments can be withdrawn after a short safety hold.</div>
       <button class="bfull" id="su-btn" onclick="doSignup()">Create Account</button>
       <div class="asw">Have an account? <a onclick="showView('login')">Sign in</a></div>
       <div class="auth-footer"><a onclick="showPolicy('privacy')">Privacy Policy</a>·<a onclick="showPolicy('terms')">Terms of Service</a></div>
@@ -929,7 +939,7 @@ tbody tr:hover td{background:var(--bg);}
       <div class="ti"><span class="tic">✓</span><span>PayPal — PCI DSS Level 1 compliant</span></div>
       <div class="ti"><span class="tic">✓</span><span>256-bit TLS encryption on all payments</span></div>
       <div class="ti"><span class="tic">✓</span><span>Card details never touch our servers</span></div>
-      <div class="ti"><span class="tic">✓</span><span>PayPal Buyer Protection on all payments</span></div>
+      <div class="ti"><span class="tic">✓</span><span>PayPal Buyer Protection on eligible PayPal purchases</span></div>
       <div class="ti"><span class="tic">✓</span><span>PayPal fraud detection &amp; dispute system</span></div>
       <div class="ti"><span class="tic">✓</span><span>All withdrawals manually reviewed</span></div>
     </div>
@@ -941,27 +951,115 @@ tbody tr:hover td{background:var(--bg);}
 
 <script>
 // ═══════════════════════════════════════════════
-// SUPABASE CONFIG
+// API — every read and write goes through the VyCheckout Worker (/api).
+// The browser never records payments, sets balances or decides prices; the Worker does.
 // ═══════════════════════════════════════════════
-const SB_URL  = 'https://admvtnirnjfikquognbl.supabase.co';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkbXZ0bmlybmpmaWtxdW9nbmJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMDA3OTksImV4cCI6MjA5MTg3Njc5OX0.Je5CK8YSSMx63PB-MAkslQg9l1nowRRNq_E2oeZNZ6Q';
-const { createClient } = supabase;
-const sb = createClient(SB_URL, SB_ANON);
+let CFG = {
+  paypal_client_id: null, stripe_publishable_key: null, google_enabled: false,
+  fee_pct: 24, referral_pct: 1, min_withdraw: { paypal: 100, bank: 500 }
+};
 
-// ═══════════════════════════════════════════════
-// ADMIN CONFIG (hidden — normal login flow)
-// ═══════════════════════════════════════════════
-const ADMIN_EMAIL = 'dabarey24@gmail.com';
+class ApiError extends Error {
+  constructor(message, status, code) { super(message); this.status = status; this.code = code; }
+}
 
-// ═══════════════════════════════════════════════
-// APP CONFIG
-// ═══════════════════════════════════════════════
-const PLATFORM_FEE = 0.24;
-const REFERRAL_PCT = 0.01;
-const STRIPE_PK = 'pk_live_51TMOTTKbSpj1hjtTNY22ajrpLKEw4kqPSyZnDOBg9BPi4Tc1m0mNp9cNetqszXwZ0oKVmrwSjXEeneTRHnRnSikD00ITHTgjnz';
-const STRIPE_FN = 'https://admvtnirnjfikquognbl.supabase.co/functions/v1/stripe-setup';
-const PP_MIN_WD    = 100;
-const BK_MIN_WD    = 500;
+async function api(method, path, body, _retried) {
+  if (needsHuman(method, path)) await ensureHuman();
+  let res;
+  try {
+    res = await fetch(path, {
+      method,
+      credentials: 'same-origin',
+      headers: Object.assign({ 'X-Requested-With': 'VyCheckout' }, body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    throw new ApiError('Network error — check your connection and try again', 0, 'network');
+  }
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok && res.status === 403 && data && data.code === 'human_check' && !_retried) {
+    await ensureHuman(true);
+    return api(method, path, body, true);
+  }
+  if (!res.ok) {
+    // Session expired or account suspended while using the dashboard
+    if (res.status === 401 && currentUser && !path.startsWith('/api/auth/')) handleSignedOut('Your session has ended. Please sign in again.');
+    throw new ApiError((data && data.error) || ('Something went wrong (' + res.status + ')'), res.status, data && data.code);
+  }
+  return data;
+}
+
+// Bot check: Turnstile runs once, the Worker gives a 30-minute pass (cookie). Only these actions need it.
+let _humanUntil = 0, _humanPromise = null, _tsLoading = null;
+function needsHuman(method, path) {
+  if (!CFG.turnstile_site_key || method === 'GET') return false;
+  if (/^\/api\/auth\/(signup|login|forgot)$/.test(path)) return true;
+  return !currentUser && /^\/api\/pay\//.test(path) && !/(capture|confirm|activate)$/.test(path);
+}
+function loadTurnstile() {
+  if (window.turnstile) return Promise.resolve();
+  if (!_tsLoading) _tsLoading = new Promise((resolve, reject) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    sc.onload = () => resolve(); sc.onerror = () => { _tsLoading = null; reject(new Error('Could not load the security check')); };
+    document.head.appendChild(sc);
+  });
+  return _tsLoading;
+}
+async function ensureHuman(force) {
+  if (!CFG.turnstile_site_key) return;
+  if (!force && Date.now() < _humanUntil - 60000) return;
+  if (_humanPromise) return _humanPromise;
+  _humanPromise = (async () => {
+    await loadTurnstile();
+    const box = document.createElement('div');
+    box.className = 'human-box';
+    document.body.appendChild(box);
+    try {
+      const token = await new Promise((resolve, reject) => {
+        window.turnstile.render(box, {
+          sitekey: CFG.turnstile_site_key, appearance: 'interaction-only',
+          callback: resolve,
+          'error-callback': () => reject(new ApiError('The security check failed. Please refresh and try again.', 403, 'human_check')),
+          'timeout-callback': () => reject(new ApiError('The security check timed out. Please try again.', 403, 'human_check')),
+        });
+      });
+      const res = await fetch('/api/human', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'VyCheckout' },
+        body: JSON.stringify({ token }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new ApiError(d.error || 'Security check failed', res.status, d.code);
+      _humanUntil = Date.now() + (d.expires_in || 1800) * 1000;
+    } finally {
+      box.remove();
+    }
+  })().finally(() => { _humanPromise = null; });
+  return _humanPromise;
+}
+
+// Same as api(), but shows any error as a toast and returns null
+async function apiToast(method, path, body) {
+  try { return await api(method, path, body); }
+  catch (e) { toast(e.message, 'er'); return null; }
+}
+
+async function loadConfig() {
+  try { CFG = Object.assign(CFG, await api('GET', '/api/config')); }
+  catch (e) { console.error('Could not load config', e); }
+  document.querySelectorAll('.fee-pct').forEach(el => { el.textContent = CFG.fee_pct + '%'; });
+}
+
+// "You receive X after the 19% fee" under the amount fields of the create forms
+function feeNote(prefix) {
+  const el = g(prefix + '-fee'); if (!el) return;
+  const amt = parseFloat(gi(prefix + '-a')), cur = gi(prefix + '-c') || 'USD';
+  el.textContent = amt > 0
+    ? 'You receive ' + fmtAmt(amt * (100 - CFG.fee_pct) / 100, cur) + ' per payment after the ' + CFG.fee_pct + '% platform fee.'
+    : 'VyCheckout keeps ' + CFG.fee_pct + '% of each payment.';
+}
 
 const CURS = {
   USD:{f:'🇺🇸',s:'$'},EUR:{f:'🇪🇺',s:'€'},GBP:{f:'🇬🇧',s:'£'},
@@ -983,89 +1081,23 @@ function fmtAmt(n, c) {
 // ═══════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════
-let currentUser  = null;  // Supabase auth user
+let currentUser  = null;  // signed-in user (from /api/me)
 let currentProfile = null; // our profiles table row
 let isAdmin = false;
 
 // ═══════════════════════════════════════════════
-// SUPABASE HELPERS — all data lives in Supabase
+// FORMAT HELPERS
 // ═══════════════════════════════════════════════
-async function sbGet(table, filters = {}) {
-  let q = sb.from(table).select('*');
-  Object.entries(filters).forEach(([k, v]) => { q = q.eq(k, v); });
-  const { data, error } = await q.order('created_at', { ascending: false });
-  if (error) { console.error(table, error); return []; }
-  return data || [];
+// Totals per currency, e.g. { USD: 12.5, EUR: 3 } → "$12.50 + €3.00"
+function fmMulti(obj) {
+  const e = Object.entries(obj || {}).filter(([, v]) => v)
+    .sort(([a], [b]) => (a === 'USD' ? -1 : b === 'USD' ? 1 : a.localeCompare(b)));
+  return e.length ? e.map(([c, v]) => fmtAmt(v, c)).join(' + ') : fmtAmt(0, 'USD');
 }
-async function ensureProfile(referrerId) {
-  // Make sure a profile row exists for the current user before any insert
-  if (!currentUser) return false;
-  const uid = currentUser.id;
-  try {
-    const { data: existing } = await sb.from('profiles').select('id,referrer_id').eq('id', uid).single();
-    if (existing) {
-      // Profile exists — update referrer_id if provided and not already set
-      if (referrerId && !existing.referrer_id) {
-        await sb.from('profiles').update({ referrer_id: referrerId }).eq('id', uid);
-      }
-      return true;
-    }
-    // Profile missing — create it now with referrer_id included
-    const meta = currentUser.user_metadata || {};
-    const row = {
-      id:            uid,
-      full_name:     meta.full_name || meta.name || '',
-      business_name: meta.business_name || meta.full_name || meta.name || '',
-      email:         currentUser.email || '',
-      ref_code:      (Math.random().toString(36).slice(2,8)).toUpperCase(),
-      balance:       0,
-      total_earned:  0,
-      ref_earned:    0
-    };
-    if (referrerId) row.referrer_id = referrerId;
-    await sb.from('profiles').upsert(row, { onConflict: 'id' });
-    return true;
-  } catch(e) {
-    console.error('ensureProfile error:', e);
-    return false;
-  }
-}
-
-async function sbInsert(table, row) {
-  try {
-    // Guarantee profile exists before any FK-dependent insert
-    if (currentUser && row.user_id) {
-      await ensureProfile();
-    }
-    const { data, error } = await sb.from(table).insert(row).select().single();
-    if (error) {
-      console.error('INSERT ERROR', table, error.code, error.message);
-      if (error.code === '42501' || (error.message||'').includes('policy') || (error.message||'').includes('permission')) {
-        toast('Permission denied — make sure you ran the SQL setup in Supabase', 'er');
-      } else if (error.code === '23503') {
-        toast('Account setup incomplete — please log out and log back in', 'er');
-      } else if (error.code === '23505') {
-        toast('This item already exists', 'er');
-      } else {
-        toast('Could not save: ' + (error.message || 'Unknown error'), 'er');
-      }
-      return null;
-    }
-    return data;
-  } catch(e) {
-    console.error('sbInsert exception:', e);
-    toast('Network error — check your connection and try again', 'er');
-    return null;
-  }
-}
-async function sbUpdate(table, id, updates) {
-  const { data, error } = await sb.from(table).update(updates).eq('id', id).select().single();
-  if (error) { console.error('update', table, error); return null; }
-  return data;
-}
-async function sbDelete(table, id) {
-  const { error } = await sb.from(table).delete().eq('id', id);
-  if (error) { console.error('delete', table, error); }
+// Minimum withdrawal in a currency (×100 for yen, which has no cents)
+function minWd(method, cur) {
+  const base = (CFG.min_withdraw || {})[method] || (method === 'paypal' ? 100 : 500);
+  return isZD(cur) ? base * 100 : base;
 }
 
 // ═══════════════════════════════════════════════
@@ -1096,140 +1128,57 @@ function updateNav() {
 // AUTH
 // ═══════════════════════════════════════════════
 async function doSignup() {
-  const name = v('su-n'), email = v('su-e').toLowerCase().trim(),
-        pass = v('su-p'), biz = v('su-b');
-  let ref = v('su-r').toUpperCase().trim();
+  const name = v('su-n'), email = v('su-e').toLowerCase(), pass = v('su-p'), biz = v('su-b');
+  let ref = v('su-r').toUpperCase();
   if (!ref) ref = (localStorage.getItem('vy_pending_ref') || '').toUpperCase().trim();
   if (!name || !email || !pass || !biz) { showErr('su-err', 'Fill in all fields'); return; }
   if (pass.length < 8) { showErr('su-err', 'Password must be 8+ characters'); return; }
   setBL('su-btn', true, 'Creating account…');
   hideErr('su-err');
-
-  const { data: authData, error: authErr } = await sb.auth.signUp({
-    email, password: pass,
-    options: { data: { full_name: name, business_name: biz } }
-  });
-
-  if (authErr) {
-    let msg = authErr.message;
-    if (msg.includes('rate limit') || msg.includes('email rate')) {
-      msg = 'Too many signups right now. Please try again in a few minutes.';
-    } else if (msg.includes('already registered') || msg.includes('User already registered')) {
-      msg = 'An account with this email already exists. Try signing in instead.';
-    }
-    showErr('su-err', msg);
+  try {
+    const d = await api('POST', '/api/auth/signup', { full_name: name, business_name: biz, email, password: pass, ref });
+    localStorage.removeItem('vy_pending_ref');
     setBL('su-btn', false, 'Create Account');
-    return;
-  }
-
-  // Remember the referral code; afterLogin applies it once the profile row exists.
-  if (ref) localStorage.setItem('vy_pending_ref', ref); else localStorage.removeItem('vy_pending_ref');
-
-  // Step 2: session returned — email confirmation OFF — go straight to dashboard
-  if (authData.session && authData.user) {
+    await afterLogin(d.user, { welcome: 'Welcome to VyCheckout! 🎉 Check your email to confirm your address.' });
+  } catch (e) {
+    showErr('su-err', e.message);
     setBL('su-btn', false, 'Create Account');
-    await afterLogin(authData.user, { welcome: 'Welcome to VyCheckout! 🎉' });
-    return;
-  }
-
-  // Step 3: try signing in immediately
-  setBL('su-btn', false, 'Create Account');
-  const { data: signInData, error: signInErr } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (!signInErr && signInData.session) {
-    await afterLogin(signInData.user, { welcome: 'Welcome to VyCheckout! 🎉' });
-    return;
-  }
-
-  // Step 4: email confirmation required
-  const errBox = g('su-err');
-  if (errBox) {
-    errBox.style.background = '#f0fdf4';
-    errBox.style.color = '#15803d';
-    errBox.style.borderColor = 'rgba(22,163,74,.25)';
-    errBox.classList.remove('hidden');
-    errBox.textContent = '✓ Account created! Check your email to confirm, then sign in.';
   }
 }
 
 async function doLogin() {
-  const email = v('li-e').toLowerCase().trim(), pass = v('li-p');
-  if (!email || !pass) { showErr('li-err','Enter email and password'); return; }
+  const email = v('li-e').toLowerCase(), pass = v('li-p');
+  if (!email || !pass) { showErr('li-err', 'Enter email and password'); return; }
   hideErr('li-err');
   setBL('li-btn', true, 'Signing in…');
-
-  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) {
-    showErr('li-err', error.message === 'Invalid login credentials' ? 'Wrong email or password' : error.message);
+  try {
+    const d = await api('POST', '/api/auth/login', { email, password: pass });
     setBL('li-btn', false, 'Sign In');
-    return;
+    await afterLogin(d.user, { welcome: true });
+  } catch (e) {
+    showErr('li-err', e.message);
+    setBL('li-btn', false, 'Sign In');
   }
-  setBL('li-btn', false, 'Sign In');
-  await afterLogin(data.user, { welcome: true });
 }
 
-async function doGoogleLogin() {
-  const { error } = await sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: location.origin + location.pathname,
-      queryParams: { access_type: 'offline', prompt: 'consent' }
-    }
-  });
-  if (error) { toast('Google login failed: ' + error.message, 'er'); }
-  // Supabase redirects to Google — on return, onAuthStateChange fires afterLogin automatically
+function doGoogleLogin() {
+  if (!CFG.google_enabled) { toast('Google sign-in is not available yet — use email and password', 'er'); return; }
+  const ref = (v('su-r') || localStorage.getItem('vy_pending_ref') || '').toUpperCase();
+  location.href = '/api/auth/google/start' + (ref ? '?ref=' + encodeURIComponent(ref) : '');
 }
 
 // opts.welcome: show a welcome toast (true or custom text). opts.quiet: load the session without opening the dashboard.
 async function afterLogin(user, opts) {
   opts = opts || {};
   currentUser = user;
-  // Load profile from DB — may not exist yet for new users
-  let { data: prof } = await sb.from('profiles').select('*').eq('id', user.id).single();
-
-  // If no profile yet, create one
-  if (!prof) {
-    const refCode = genRefCode();
-    const fullName = user.user_metadata?.full_name || user.user_metadata?.name || '';
-    const bizName  = user.user_metadata?.business_name || fullName || '';
-    const newRow = {
-      id: user.id,
-      full_name: fullName,
-      business_name: bizName,
-      email: user.email || '',
-      ref_code: refCode,
-      balance: 0,
-      total_earned: 0,
-      ref_earned: 0
-    };
-    const { data: newProf } = await sb.from('profiles').upsert(newRow, { onConflict: 'id' }).select().single();
-    prof = newProf;
-    // Notify admin of new signup
-    notify('user_signup', { full_name: newRow.full_name, email: user.email, business_name: newRow.business_name });
-  }
-
-  currentProfile = prof || {
-    id: user.id,
-    full_name: user.user_metadata?.full_name || '',
-    business_name: user.user_metadata?.business_name || '',
-    email: user.email,
-    balance: 0, total_earned: 0, ref_earned: 0,
-    ref_code: genRefCode()
-  };
-
-  await applyPendingReferral();
-
-  isAdmin = (user.email || '').toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim();
+  currentProfile = user;
+  isAdmin = !!user.is_admin;   // decided by the server; admin API calls are checked there too
   updateNav();
   if (opts.quiet) return;
 
-  // Show dashboard IMMEDIATELY — don't wait for data to load
-  if (isAdmin) {
-    showView('dash');
-    await renderAdminDash();
-  } else {
-    showView('dash');
-    await renderUserDash();
-  }
+  showView('dash');
+  if (isAdmin) await renderAdminDash();
+  else await renderUserDash();
 
   if (opts.welcome) {
     const firstName = currentProfile?.full_name?.split(' ')[0] || '';
@@ -1237,55 +1186,63 @@ async function afterLogin(user, opts) {
   }
 }
 
-// Attach a referral code saved at signup (or from a ?ref= link) once the profile row exists.
-async function applyPendingReferral() {
-  const code = (localStorage.getItem('vy_pending_ref') || '').toUpperCase().trim();
-  if (!code || !currentUser || !currentProfile) return;
-  localStorage.removeItem('vy_pending_ref');
-  if (currentProfile.referrer_id) return;
-  if (code === String(currentProfile.ref_code || '').toUpperCase()) return; // no self-referral
-  const { data: refUser } = await sb.from('profiles').select('id').eq('ref_code', code).single();
-  if (!refUser || refUser.id === currentUser.id) return;
-  const { error } = await sb.from('profiles').update({ referrer_id: refUser.id }).eq('id', currentUser.id);
-  if (!error) currentProfile.referrer_id = refUser.id;
+function handleSignedOut(message) {
+  currentUser = null; currentProfile = null; isAdmin = false; _dash = null;
+  updateNav();
+  showView('landing');
+  if (message) toast(message, 'er');
 }
 
 async function doLogout() {
-  await sb.auth.signOut();
-  currentUser = null; currentProfile = null; isAdmin = false;
-  updateNav();
-  showView('landing');
+  try { await api('POST', '/api/auth/logout'); } catch (e) {}
+  handleSignedOut();
   toast('Signed out');
 }
 
+let _resetToken = null;
 async function doSetNewPassword() {
   const pass = v('np-p');
   const conf = v('np-c');
   if (!pass || pass.length < 8) { showErr('np-err', 'Password must be 8+ characters'); return; }
   if (pass !== conf) { showErr('np-err', 'Passwords do not match'); return; }
+  if (!_resetToken) { showErr('np-err', 'This reset link is invalid. Request a new one.'); return; }
   hideErr('np-err');
   setBL('np-btn', true, 'Updating…');
-  const { error } = await sb.auth.updateUser({ password: pass });
-  setBL('np-btn', false, 'Set New Password');
-  if (error) { showErr('np-err', error.message); return; }
-  g('np-form').classList.add('hidden');
-  g('np-success').classList.remove('hidden');
-  toast('Password updated successfully! ✓', 'ok');
+  try {
+    const d = await api('POST', '/api/auth/reset', { token: _resetToken, password: pass });
+    _resetToken = null;
+    setBL('np-btn', false, 'Set New Password');
+    g('np-form').classList.add('hidden');
+    g('np-success').classList.remove('hidden');
+    toast('Password updated successfully! ✓', 'ok');
+    setTimeout(() => afterLogin(d.user), 1200);
+  } catch (e) {
+    setBL('np-btn', false, 'Set New Password');
+    showErr('np-err', e.message);
+  }
 }
 
 async function doForgotPassword() {
-  const email = v('fp-e').toLowerCase().trim();
+  const email = v('fp-e').toLowerCase();
   if (!email) { showErr('fp-err', 'Enter your email address'); return; }
   hideErr('fp-err');
   setBL('fp-btn', true, 'Sending…');
+  try {
+    await api('POST', '/api/auth/forgot', { email });
+    setBL('fp-btn', false, 'Send Reset Link');
+    g('fp-form').classList.add('hidden');
+    g('fp-success').classList.remove('hidden');
+  } catch (e) {
+    setBL('fp-btn', false, 'Send Reset Link');
+    showErr('fp-err', e.message);
+  }
+}
 
-  const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: location.origin + location.pathname + '?reset=1'
-  });
-  setBL('fp-btn', false, 'Send Reset Link');
-  if (error) { showErr('fp-err', error.message); return; }
-  g('fp-form').classList.add('hidden');
-  g('fp-success').classList.remove('hidden');
+async function resendVerification(btn) {
+  if (btn) btn.disabled = true;
+  const d = await apiToast('POST', '/api/auth/resend-verification');
+  if (d) toast(d.already ? 'Your email is already confirmed ✓' : 'Confirmation email sent — check your inbox ✓', 'ok');
+  if (btn) btn.disabled = false;
 }
 
 // ═══════════════════════════════════════════════
@@ -1297,6 +1254,7 @@ async function renderUserDash() {
     <div class="sb-lbl">Overview</div>
     <button class="sbb active" onclick="spU('p-home',this)"><span class="si">🏠</span>Home</button>
     <button class="sbb" onclick="spU('p-api',this)"><span class="si">⚡</span>API Keys</button>
+    <button class="sbb" onclick="spU('p-account',this)"><span class="si">⚙️</span>Account</button>
     <div class="sb-lbl">Payments</div>
     <button class="sbb" onclick="spU('p-cols',this)"><span class="si">📋</span>Collections</button>
     <button class="sbb" onclick="spU('p-subs',this)"><span class="si">🔄</span>Subscriptions</button>
@@ -1314,6 +1272,7 @@ async function renderUserDash() {
   dm.innerHTML = `
     <!-- HOME -->
     <div class="panel active" id="p-home">
+      <div id="verify-banner"></div>
 
       <!-- Greeting -->
       <div class="home-greet" style="display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem">
@@ -1321,7 +1280,10 @@ async function renderUserDash() {
           <div class="home-greet-hi" id="h-title">Dashboard</div>
           <div class="home-greet-sub">Here's your overview</div>
         </div>
-        <button class="nb" onclick="quickNav('p-api')">⚡ API keys</button>
+        <div style="display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end">
+          <button class="nb" onclick="quickNav('p-account')">⚙️ Account</button>
+          <button class="nb" onclick="quickNav('p-api')">⚡ API keys</button>
+        </div>
       </div>
 
       <!-- Profile card -->
@@ -1342,8 +1304,9 @@ async function renderUserDash() {
       <!-- Stats grid -->
       <div class="home-stats">
         <div class="home-stat">
-          <div class="home-stat-lbl">Balance</div>
+          <div class="home-stat-lbl">Available</div>
           <div class="home-stat-val" style="color:var(--grn)" id="s-bal">…</div>
+          <div class="home-stat-sub" id="s-held"></div>
         </div>
         <div class="home-stat">
           <div class="home-stat-lbl">Earned</div>
@@ -1368,7 +1331,10 @@ async function renderUserDash() {
     <!-- COLLECTIONS -->
     <div class="panel" id="p-cols">${listBar('p-cols')}<div class="pt">Collections</div><div class="ps">One-time payment campaigns</div><div class="cg" id="cols-g"><div class="empty"><div class="empty-ic">📋</div><p>Loading…</p></div></div></div>
     <!-- SUBSCRIPTIONS -->
-    <div class="panel" id="p-subs">${listBar('p-subs')}<div class="pt">Subscriptions</div><div class="ps">Recurring billing plans</div><div class="cg" id="subs-g"><div class="empty"><div class="empty-ic">🔄</div><p>Loading…</p></div></div></div>
+    <div class="panel" id="p-subs">${listBar('p-subs')}<div class="pt">Subscriptions</div><div class="ps">Recurring billing plans</div><div class="cg" id="subs-g"><div class="empty"><div class="empty-ic">🔄</div><p>Loading…</p></div></div>
+      <div class="mt2 sh2"><h3>Subscribers</h3></div>
+      <div class="tw"><table><thead><tr><th>Started</th><th>Subscriber</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th><th></th></tr></thead><tbody id="subs-tbl"></tbody></table></div>
+    </div>
     <!-- PAY LINKS -->
     <div class="panel" id="p-lnks">${listBar('p-lnks')}<div class="pt">Payment Links</div><div class="ps">Shareable checkout links</div><div class="cg" id="lnks-g"><div class="empty"><div class="empty-ic">🔗</div><p>Loading…</p></div></div></div>
     <!-- NEW COLLECTION -->
@@ -1387,6 +1353,7 @@ async function renderUserDash() {
             </select></div>
           </div>
           <div class="fg"><label>Description</label><textarea id="nc-d" placeholder="What is this for?"></textarea></div>
+          <div class="fee-note" id="nc-fee"></div>
           <button class="ba" id="nc-btn" onclick="createCol()">Save Collection</button>
         </div>
         <div class="fs" id="nc-pay-box" style="display:none;">
@@ -1401,7 +1368,7 @@ async function renderUserDash() {
     <!-- NEW SUBSCRIPTION -->
     <div class="panel" id="p-ns">
       ${newBar('p-ns')}
-      <div class="pt">New Subscription</div><div class="ps">Set up details then accept the first payment below</div>
+      <div class="pt">New Subscription</div><div class="ps">Customers subscribe from the plan's link and are charged automatically every period (PayPal or card). They can cancel any time from their receipt email.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:860px;">
         <div class="fs"><h3>Plan details</h3>
           <div class="fg"><label>Plan Name</label><input type="text" id="ns-n" placeholder="e.g. Monthly Pro" oninput="nsPreview()"></div>
@@ -1414,6 +1381,7 @@ async function renderUserDash() {
             <option value="AUD">🇦🇺 AUD</option><option value="CAD">🇨🇦 CAD</option><option value="SGD">🇸🇬 SGD</option>
           </select></div>
           <div class="fg"><label>Description</label><textarea id="ns-d" placeholder="What do subscribers get?"></textarea></div>
+          <div class="fee-note" id="ns-fee"></div>
           <button class="ba" id="ns-btn" onclick="createSub()">Save Plan</button>
         </div>
         <div class="fs" id="ns-pay-box" style="display:none;">
@@ -1443,6 +1411,7 @@ async function renderUserDash() {
             <option value="JPY">🇯🇵 JPY</option><option value="MXN">🇲🇽 MXN</option><option value="HKD">🇭🇰 HKD</option>
           </select></div>
           <div class="fg"><label>Note (optional)</label><textarea id="nl-no" placeholder="Extra context for payer"></textarea></div>
+          <div class="fee-note" id="nl-fee"></div>
           <button class="ba" id="nl-btn" onclick="createLink()">Save &amp; Get Link</button>
         </div>
         <div class="fs" id="nl-pay-box" style="display:none;">
@@ -1462,24 +1431,26 @@ async function renderUserDash() {
     <!-- WITHDRAW -->
     <div class="panel" id="p-wd">
       <div class="pt">Withdraw Funds</div><div class="ps">Request processed manually within 5–14 business days</div>
-      <div class="gbox">💰 Available balance: <strong id="wd-avail">…</strong></div>
+      <div class="fg" style="max-width:220px"><label>Currency</label><select id="wd-cur" onchange="onWdCur()"><option value="USD">🇺🇸 USD</option></select></div>
+      <div class="gbox">💰 Available to withdraw: <strong id="wd-avail">…</strong></div>
+      <div class="ibox" id="wd-held" style="display:none"></div>
       <div class="wbox hidden" id="wd-warn">⚠️ Insufficient balance to withdraw.</div>
       <div class="wd-tog">
-        <button class="wd-t active" id="wd-pp-t" onclick="setWd('paypal')">🅿 PayPal <small style="font-weight:400;font-size:.68rem">min $100</small></button>
-        <button class="wd-t" id="wd-bk-t" onclick="setWd('bank')">🏦 Bank Transfer <small style="font-weight:400;font-size:.68rem">min $500</small></button>
+        <button class="wd-t active" id="wd-pp-t" onclick="setWd('paypal')">🅿 PayPal <small class="wd-min-pp" style="font-weight:400;font-size:.68rem">min $100</small></button>
+        <button class="wd-t" id="wd-bk-t" onclick="setWd('bank')">🏦 Bank Transfer <small class="wd-min-bk" style="font-weight:400;font-size:.68rem">min $500</small></button>
       </div>
       <div class="wds show fs mb1" id="wd-pp-s">
         <h3>Withdraw to PayPal</h3>
-        <div class="ibox">💡 Minimum <strong>$100</strong>. No monthly cap. Processed in 5–14 business days.</div>
-        <div class="fg"><label>Amount (min $100)</label><input type="number" id="pp-amt" placeholder="100.00" min="100" step="0.01"></div>
+        <div class="ibox">💡 <span>Minimum <strong class="wd-minv-pp">$100</strong>. No monthly cap. Processed in 5–14 business days.</span></div>
+        <div class="fg"><label>Amount</label><input type="number" id="pp-amt" placeholder="100.00" min="100" step="0.01"></div>
         <div class="fg"><label>Your PayPal Email</label><input type="email" id="pp-email" placeholder="your@paypal.com"></div>
         <div class="fg"><label>Notes (optional)</label><textarea id="pp-notes" placeholder="Any extra info"></textarea></div>
         <button class="ba" id="pp-wd-btn" onclick="submitWd('paypal')">Request PayPal Payout</button>
       </div>
       <div class="wds fs mb1" id="wd-bk-s">
         <h3>Withdraw to Bank</h3>
-        <div class="ibox">🏦 Minimum <strong>$500</strong>. No monthly cap. International wire transfer.</div>
-        <div class="fg"><label>Amount (min $500)</label><input type="number" id="bk-amt" placeholder="500.00" min="500" step="0.01"></div>
+        <div class="ibox">🏦 <span>Minimum <strong class="wd-minv-bk">$500</strong>. No monthly cap. International wire transfer.</span></div>
+        <div class="fg"><label>Amount</label><input type="number" id="bk-amt" placeholder="500.00" min="500" step="0.01"></div>
         <div class="fg"><label>Your Country</label>
           <div class="ctw"><span class="ctf" id="wd-cf">🌍</span>
             <select id="wd-cnt" onchange="onCountry()">
@@ -1521,6 +1492,43 @@ async function renderUserDash() {
       <div class="tw"><table><thead><tr><th>Name</th><th>Joined</th><th>Status</th></tr></thead><tbody id="ref-tbl"></tbody></table></div>
     </div>
 
+    <!-- ACCOUNT -->
+    <div class="panel" id="p-account">
+      <div class="pt">Account</div><div class="ps">Sign-in, notifications and your data</div>
+      <div class="acct-sec">
+        <h3>Email</h3>
+        <div class="acct-row" style="margin-bottom:.7rem"><span id="acct-email">…</span><span id="acct-email-st"></span></div>
+        <div id="acct-email-form">
+          <div class="fg"><label>New email</label><input type="email" id="ac-email" autocomplete="email"></div>
+          <div class="fg"><label>Current password</label><input type="password" id="ac-email-pw" autocomplete="current-password"></div>
+          <button class="ba" id="ac-email-btn" onclick="changeEmail()">Change email</button>
+        </div>
+      </div>
+      <div class="acct-sec">
+        <h3 id="acct-pw-title">Password</h3>
+        <p id="acct-pw-note"></p>
+        <div class="fg" id="ac-pw-cur-wrap"><label>Current password</label><input type="password" id="ac-pw-cur" autocomplete="current-password"></div>
+        <div class="fg"><label>New password</label><input type="password" id="ac-pw-new" placeholder="8+ characters" autocomplete="new-password"></div>
+        <button class="ba" id="ac-pw-btn" onclick="changePassword()">Change password</button>
+      </div>
+      <div class="acct-sec">
+        <h3>Notifications</h3>
+        <label class="acct-row" style="cursor:pointer"><span>Email me when I get paid</span><input type="checkbox" id="ac-notify" onchange="saveNotify()"></label>
+      </div>
+      <div class="acct-sec">
+        <h3>Sessions</h3>
+        <p>Signed in on a computer you no longer use? Sign out everywhere, including this device.</p>
+        <button class="bxs" onclick="logoutAll()">Sign out of all devices</button>
+      </div>
+      <div class="acct-sec danger-sec">
+        <h3 style="color:var(--red)">Delete account</h3>
+        <p>Your links stop working, subscriptions to your plans are cancelled and your personal details are removed. Payment records are kept for accounting. You must withdraw your balance first. This cannot be undone.</p>
+        <div class="fg" id="ac-del-pw-wrap"><label>Password</label><input type="password" id="ac-del-pw" autocomplete="current-password"></div>
+        <div class="fg" id="ac-del-confirm-wrap" style="display:none"><label>Type DELETE to confirm</label><input type="text" id="ac-del-confirm"></div>
+        <button class="btn-danger" id="ac-del-btn" onclick="deleteAccount()">Delete my account</button>
+      </div>
+    </div>
+
     <!-- API KEYS -->
     <div class="panel" id="p-api">
       <div class="pt">API Keys</div>
@@ -1529,7 +1537,7 @@ async function renderUserDash() {
         <div class="api-key-header">
           <div>
             <div class="api-key-title">API Keys</div>
-            <div class="api-key-sub">Create multiple keys for different projects. Revoke any key at any time.</div>
+            <div class="api-key-sub">One active key at a time. Creating a new key stops the old one. The full key is shown only once.</div>
           </div>
           <button class="ba" onclick="generateApiKey()" id="gen-api-btn">+ New Key</button>
         </div>
@@ -1544,12 +1552,14 @@ async function renderUserDash() {
       </div>
       <div class="api-docs">
         <div class="api-docs-title">Quick Reference</div>
-        <div class="api-endpoint"><div class="api-method get">GET</div><div class="api-path">/api/balance</div></div>
-        <div class="api-code">curl https://admvtnirnjfikquognbl.supabase.co/functions/v1/api/balance   -H "Authorization: Bearer YOUR_API_KEY"</div>
-        <div class="api-endpoint"><div class="api-method post">POST</div><div class="api-path">/api/collections/create</div></div>
-        <div class="api-code">curl -X POST .../api/collections/create   -H "Authorization: Bearer YOUR_API_KEY"   -H "Content-Type: application/json"   -d '{"name":"Product","amount":99.99,"currency":"USD"}'</div>
-        <div class="api-endpoint"><div class="api-method get">GET</div><div class="api-path">/api/transactions</div></div>
-        <div class="api-code">curl .../api/transactions   -H "Authorization: Bearer YOUR_API_KEY"</div>
+        <div class="api-endpoint"><div class="api-method get">GET</div><div class="api-path">/api/v1/balance</div></div>
+        <div class="api-code">curl ${location.origin}/api/v1/balance -H "Authorization: Bearer YOUR_API_KEY"</div>
+        <div class="api-endpoint"><div class="api-method post">POST</div><div class="api-path">/api/v1/collections</div></div>
+        <div class="api-code">curl -X POST ${location.origin}/api/v1/collections -H "Authorization: Bearer YOUR_API_KEY" -H "Content-Type: application/json" -d '{"name":"Product","amount":99.99,"currency":"USD"}'</div>
+        <div class="api-endpoint"><div class="api-method post">POST</div><div class="api-path">/api/v1/links</div></div>
+        <div class="api-code">curl -X POST ${location.origin}/api/v1/links -H "Authorization: Bearer YOUR_API_KEY" -H "Content-Type: application/json" -d '{"name":"Invoice 12","amount":50,"currency":"USD","expires_days":7}'</div>
+        <div class="api-endpoint"><div class="api-method get">GET</div><div class="api-path">/api/v1/transactions</div></div>
+        <div class="api-code">curl ${location.origin}/api/v1/transactions -H "Authorization: Bearer YOUR_API_KEY"</div>
         <!-- Webhook registration -->
         <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--bord)">
           <div style="font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:.5rem">🔔 Webhook URL</div>
@@ -1559,9 +1569,16 @@ async function renderUserDash() {
             <button class="ba" onclick="saveWebhookUrl()" style="white-space:nowrap">Save</button>
           </div>
           <div id="webhook-url-status" style="font-size:.68rem;color:var(--grn);margin-top:.3rem"></div>
-        </div>
-        <div style="margin-top:1rem;text-align:center">
-          <a href="/docs" target="_blank" class="api-docs-link">📖 View Full API Documentation →</a>
+          <div id="webhook-secret-row" style="display:none;margin-top:.6rem;font-size:.72rem;color:var(--ink2)">
+            Signing secret: <code id="webhook-secret" style="font-size:.68rem;background:var(--s2);padding:2px 6px;border-radius:4px;word-break:break-all"></code>
+            <button class="bxs" style="margin-left:.3rem" onclick="cpWebhookSecret()">Copy</button>
+            <button class="bxs" style="margin-left:.2rem" onclick="saveWebhookUrl(true)">New secret</button>
+          </div>
+          <div style="font-size:.68rem;color:var(--ink3);margin-top:.6rem;line-height:1.55">
+            Each webhook has a <code>VyCheckout-Signature: t=…,v1=…</code> header. To check it, compute HMAC-SHA256 of
+            <code>t + "." + raw body</code> with your signing secret and compare it to <code>v1</code>. Reject requests older than 5 minutes.
+            Events: <code>payment.succeeded</code>, <code>payment.refunded</code>.
+          </div>
         </div>
       </div>
 
@@ -1590,84 +1607,66 @@ async function renderUserDash() {
 }
 
 // ═══════════════════════════════════════════════
-// USER DATA — load from Supabase
+// USER DATA — load from the Worker
 // ═══════════════════════════════════════════════
+let _dash = null;   // last /api/dashboard response
+
 async function loadUserData() {
-  if (!currentUser) return;
-  const uid = currentUser.id;
+  if (!currentUser || isAdmin) return;
+  let d;
+  try { d = await api('GET', '/api/dashboard'); }
+  catch (e) { if (e.status !== 401) toast(e.message, 'er'); return; }
+  _dash = d;
+  currentUser = currentProfile = d.user;
 
-  // Load everything in parallel
-  const [cols, subs, lnks, txns, wds, _refs] = await Promise.all([
-    sbGet('vy_collections', { user_id: uid }),
-    sbGet('vy_subscriptions', { user_id: uid }),
-    sbGet('vy_pay_links', { user_id: uid }),
-    sbGet('vy_transactions', { user_id: uid }),
-    sbGet('vy_withdrawals', { user_id: uid }),
-    sb.rpc('get_my_referrals', { p_user_id: uid }),
-  ]);
-  const refs = Array.isArray(_refs?.data) ? _refs.data : [];
-  console.log('[VyCheckout] Referrals fetch:', { uid, count: refs.length, error: _refs?.error });
+  const cols = d.items.filter(i => i.type === 'col');
+  const subs = d.items.filter(i => i.type === 'sub');
+  const lnks = d.items.filter(i => i.type === 'lnk');
 
-  // Recalculate balance from transactions and withdrawals
-  const earned = +txns.filter(t => t.status === 'succeeded').reduce((a,t) => a + (+t.net_amount || 0), 0).toFixed(2);
-  // Referral commissions come from OTHER users' transactions and are credited to profiles.ref_earned
-  // by increment_ref_balance, so read them from the profile instead of summing this user's own rows.
-  const { data: refProf } = await sb.from('profiles').select('ref_earned').eq('id', uid).single();
-  const refEarned = +(refProf?.ref_earned || 0);
-  const wdOut = wds.filter(w => w.status !== 'rejected').reduce((a,w) => a + (+w.amount || 0), 0);
-  const balance = Math.max(0, +(earned + refEarned - wdOut).toFixed(2));
+  if (g('ref-inp')) g('ref-inp').value = location.origin + location.pathname + '?ref=' + (currentProfile.ref_code || '');
 
-  // Update profile in DB (ref_earned is left alone so referral credits aren't wiped)
-  await sb.from('profiles').update({
-    balance: balance,
-    total_earned: earned,
-    updated_at: new Date().toISOString()
-  }).eq('id', uid);
-
-  // Refresh profile
-  const { data: prof } = await sb.from('profiles').select('*').eq('id', uid).single();
-  currentProfile = prof || currentProfile;
-
-  // Set referral link
-  if (g('ref-inp')) g('ref-inp').value = location.origin + location.pathname + '?ref=' + (currentProfile?.ref_code || '');
-  if (g('prof-inp')) g('prof-inp').value = location.origin + location.pathname + '?u=' + (currentProfile?.ref_code || '');
-
-  // Update home profile card
-  const profUrl = location.origin + location.pathname + '?u=' + (currentProfile?.ref_code || '');
-  if (g('pc-avatar')) g('pc-avatar').textContent = currentProfile?.avatar || '👤';
-  if (g('pc-biz'))    g('pc-biz').textContent    = currentProfile?.business_name || currentProfile?.full_name || 'My Business';
-  if (g('pc-bio'))    g('pc-bio').textContent     = currentProfile?.bio || 'Tap Edit to add a bio';
+  // Home profile card
+  const profUrl = location.origin + location.pathname + '?u=' + (currentProfile.ref_code || '');
+  if (g('pc-avatar')) g('pc-avatar').textContent = currentProfile.avatar || '👤';
+  if (g('pc-biz'))    g('pc-biz').textContent    = currentProfile.business_name || currentProfile.full_name || 'My Business';
+  if (g('pc-bio'))    g('pc-bio').textContent    = currentProfile.bio || 'Tap Edit to add a bio';
   if (g('pc-url')) {
-    const bizSlug = (currentProfile?.business_name || currentProfile?.full_name || '').substring(0, 28);
+    const bizSlug = (currentProfile.business_name || currentProfile.full_name || '').substring(0, 28);
     g('pc-url').textContent = bizSlug ? bizSlug + ' · ' + profUrl.split('?')[1] : profUrl;
   }
+  sv('pc-followers', String(d.followers || 0));
 
-  renderHome(txns, balance, earned, refEarned);
-  renderCols(cols, txns);
+  const vb = g('verify-banner');
+  if (vb) vb.innerHTML = d.user.email_verified ? '' :
+    '<div class="wbox" style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem">' +
+    '<span>📧 Confirm your email (' + esc(d.user.email) + ') to withdraw money.</span>' +
+    '<button class="bxs" onclick="resendVerification(this)">Resend email</button></div>';
+
+  renderHome(d);
+  renderCols(cols, d.transactions);
   renderSubs(subs);
   renderLnks(lnks);
-  renderTxns(txns, cols, subs, lnks);
-  renderWdPanel(wds, balance);
-  renderRef(refs, refEarned);
+  renderTxns(d.transactions);
+  renderWdPanel(d.withdrawals, d.balances, d.held, d.next_release, d.hold_days);
+  renderSubscribers(d.subscriptions || [], subs);
+  renderAccount(d);
+  renderRef(d.referrals, d.ref_earned);
+  renderApiPanel(d);
 
-  const firstName = currentProfile?.full_name?.split(' ')[0] || 'there';
+  const firstName = currentProfile.full_name?.split(' ')[0] || 'there';
   if (g('h-title')) g('h-title').textContent = 'Hi, ' + firstName + ' 👋';
-  loadFollowerCount();
-  loadApiKey();
 }
 
 // ═══════════════════════════════════════════════
 // RENDER PANELS
 // ═══════════════════════════════════════════════
-function renderHome(txns, balance, earned, refEarned) {
-  const succeeded = txns.filter(t => t.status === 'succeeded');
-  const now = new Date(), ms = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const mon = succeeded.filter(t => new Date(t.created_at).getTime() >= ms).reduce((a,t) => a + (t.net_amount||0), 0);
-  sv('s-bal', fm(balance));
-  sv('s-tot', fm(earned));
-  sv('s-mon', fm(mon));
-  sv('s-ref', fm(refEarned || 0));
-  // Load the social feed
+function renderHome(d) {
+  sv('s-bal', fmMulti(d.balances));
+  const heldKeys = Object.keys(d.held || {});
+  sv('s-held', heldKeys.length ? '+ ' + fmMulti(d.held) + ' on hold' : '');
+  sv('s-tot', fmMulti(d.earned));
+  sv('s-mon', fmMulti(d.month));
+  sv('s-ref', fmMulti(d.ref_earned));
   loadWallFeed();
 }
 
@@ -1680,120 +1679,81 @@ async function loadWallFeed() {
   if (!feed) return;
   feed.innerHTML = '<div class="wall-empty"><div class="wall-empty-ic">⏳</div><div class="wall-empty-msg">Loading feed…</div></div>';
 
-  const { data: follows } = await sb.from('vy_follows')
-    .select('following_id').eq('follower_id', currentUser.id);
+  let d;
+  try { d = await api('GET', '/api/feed'); }
+  catch (e) { feed.innerHTML = '<div class="wall-empty"><div class="wall-empty-msg">Could not load your feed.</div></div>'; return; }
 
-  if (!follows || follows.length === 0) {
+  if (!d.following_count) {
     feed.innerHTML = '<div class="wall-empty"><div class="wall-empty-ic">👥</div><div class="wall-empty-msg">Your feed is empty</div><div class="wall-empty-sub">Follow other users on their profile page to see their collections here.</div></div>';
     return;
   }
-
-  const followingIds = follows.map(function(f) { return f.following_id; });
-  followingIds.forEach(function(id) { _wallFollowing[id] = true; });
-
-  const { data: profiles } = await sb.from('profiles')
-    .select('id,full_name,business_name,avatar,ref_code')
-    .in('id', followingIds);
-
-  const profMap = {};
-  (profiles || []).forEach(function(p) { profMap[p.id] = p; });
-
-  const res = await Promise.all([
-    sb.from('vy_collections').select('*').in('user_id', followingIds).order('created_at', { ascending: false }),
-    sb.from('vy_pay_links').select('*').in('user_id', followingIds).order('created_at', { ascending: false })
-  ]);
-
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const items = [].concat(
-    (res[0].data || []).filter(function(c) { return new Date(c.created_at) > thirtyDaysAgo; }).map(function(c) { c._type = 'col'; return c; }),
-    (res[1].data || []).filter(function(l) { return (!l.expires_at || new Date(l.expires_at) > new Date()) && new Date(l.created_at) > thirtyDaysAgo; }).map(function(l) { l._type = 'lnk'; return l; })
-  ).sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
-
-  if (!items.length) {
+  if (!d.items.length) {
     feed.innerHTML = '<div class="wall-empty"><div class="wall-empty-ic">📭</div><div class="wall-empty-msg">No posts yet</div><div class="wall-empty-sub">People you follow have not created any collections yet.</div></div>';
     return;
   }
 
   feed.innerHTML = '';
-  items.forEach(function(item) {
-    const prof = profMap[item.user_id] || {};
-    const av = prof.avatar || '👤';
-    const biz = prof.business_name || prof.full_name || 'User';
-    const profUrl = '?u=' + (prof.ref_code || '');
-    const payUrl = '?pay=' + item._type + ':' + item.id;
-    const sym = CS(item.currency || 'USD');
-    const isFollowing = !!_wallFollowing[item.user_id];
-    const badgeLabel = item._type === 'col' ? 'Collection' : 'Pay Link';
+  d.items.forEach(function(item) {
+    const owner = item.owner || {};
+    _wallFollowing[owner.id] = true;
+    const profUrl = '?u=' + encodeURIComponent(owner.ref_code || '');
+    const payUrl = '?pay=' + item.type + ':' + encodeURIComponent(item.id);
 
     const card = document.createElement('div');
     card.className = 'wall-card';
-
-    // Head
     const head = document.createElement('div');
     head.className = 'wall-card-head';
 
     const avEl = document.createElement('div');
     avEl.className = 'wall-av';
-    avEl.textContent = av;
+    avEl.textContent = owner.avatar || '👤';
     avEl.onclick = function() { location.href = profUrl; };
 
     const meta = document.createElement('div');
     meta.className = 'wall-meta';
-
     const bizEl = document.createElement('div');
     bizEl.className = 'wall-biz';
-    bizEl.textContent = biz;
+    bizEl.textContent = owner.business_name || 'User';
     bizEl.onclick = function() { location.href = profUrl; };
-
     const timeEl = document.createElement('div');
     timeEl.className = 'wall-time';
     timeEl.textContent = fd(item.created_at);
-
     meta.appendChild(bizEl);
     meta.appendChild(timeEl);
 
     const followBtn = document.createElement('button');
-    followBtn.className = isFollowing ? 'wall-follow-btn following' : 'wall-follow-btn';
-    followBtn.id = 'wf-' + item.user_id;
-    followBtn.textContent = isFollowing ? '✓ Following' : '+ Follow';
-    followBtn.setAttribute('data-uid', item.user_id);
-    followBtn.onclick = function() { wallToggleFollow(item.user_id); };
+    followBtn.className = 'wall-follow-btn following';
+    followBtn.textContent = '✓ Following';
+    followBtn.setAttribute('data-uid', owner.id);
+    followBtn.onclick = function() { wallToggleFollow(owner.id); };
 
     head.appendChild(avEl);
     head.appendChild(meta);
     head.appendChild(followBtn);
 
-    // Body
     const body = document.createElement('div');
     body.className = 'wall-body';
-
     const badge = document.createElement('div');
-    badge.className = 'wall-badge ' + item._type;
-    badge.textContent = badgeLabel;
-
+    badge.className = 'wall-badge ' + item.type;
+    badge.textContent = item.type === 'col' ? 'Collection' : 'Pay Link';
     const nameEl = document.createElement('div');
     nameEl.className = 'wall-item-name';
     nameEl.textContent = item.name;
-
-    const priceEl = document.createElement('div');
-    priceEl.className = 'wall-item-price';
-    priceEl.textContent = fmtAmt(item.amount, item.currency);
-
-    const payBtn = document.createElement('button');
-    payBtn.className = 'wall-pay-btn';
-    payBtn.textContent = 'Pay Now';
-    payBtn.onclick = function() { location.href = payUrl; };
-
     body.appendChild(badge);
     body.appendChild(nameEl);
-
     if (item.description) {
       const desc = document.createElement('div');
       desc.className = 'wall-item-desc';
       desc.textContent = item.description;
       body.appendChild(desc);
     }
-
+    const priceEl = document.createElement('div');
+    priceEl.className = 'wall-item-price';
+    priceEl.textContent = item.custom_amount ? 'Any amount' : fmtAmt(item.amount, item.currency);
+    const payBtn = document.createElement('button');
+    payBtn.className = 'wall-pay-btn';
+    payBtn.textContent = 'Pay Now';
+    payBtn.onclick = function() { location.href = payUrl; };
     body.appendChild(priceEl);
     body.appendChild(payBtn);
 
@@ -1805,31 +1765,18 @@ async function loadWallFeed() {
 
 async function wallToggleFollow(userId) {
   if (!currentUser) { showView('signup'); return; }
-  const btns = document.querySelectorAll('[data-uid="' + userId + '"]');
+  const btns = document.querySelectorAll('[data-uid="' + CSS.escape(userId) + '"]');
   btns.forEach(function(b) { b.disabled = true; });
-
-  const isNowFollowing = !!_wallFollowing[userId];
-
-  if (isNowFollowing) {
-    await sb.from('vy_follows').delete()
-      .eq('follower_id', currentUser.id).eq('following_id', userId);
-    _wallFollowing[userId] = false;
-    btns.forEach(function(b) {
-      b.className = 'wall-follow-btn';
-      b.textContent = '+ Follow';
-      b.disabled = false;
-    });
-    toast('Unfollowed', 'ok');
-  } else {
-    await sb.from('vy_follows').insert({ follower_id: currentUser.id, following_id: userId });
-    _wallFollowing[userId] = true;
-    btns.forEach(function(b) {
-      b.className = 'wall-follow-btn following';
-      b.textContent = '✓ Following';
-      b.disabled = false;
-    });
-    toast('Following! ✓', 'ok');
-  }
+  const wasFollowing = !!_wallFollowing[userId];
+  const d = await apiToast(wasFollowing ? 'DELETE' : 'POST', '/api/follows/' + encodeURIComponent(userId));
+  btns.forEach(function(b) { b.disabled = false; });
+  if (!d) return;
+  _wallFollowing[userId] = !wasFollowing;
+  btns.forEach(function(b) {
+    b.className = wasFollowing ? 'wall-follow-btn' : 'wall-follow-btn following';
+    b.textContent = wasFollowing ? '+ Follow' : '✓ Following';
+  });
+  toast(wasFollowing ? 'Unfollowed' : 'Following! ✓', 'ok');
   setTimeout(loadWallFeed, 500);
 }
 
@@ -1860,7 +1807,7 @@ document.addEventListener('click', function(e) {
   } else if (act === 'pay') {
     const it = _items[b.dataset.key]; if (!it) return;
     // The dashboard modal has no amount box, so payer-chosen amounts go through the public checkout
-    if (it.custom) window.open(coUrl(it.type, it.id), '_blank'); else openPay(it);
+    if (it.custom || it.type === 'sub') window.open(coUrl(it.type, it.id), '_blank'); else openPay(it);
   } else if (act === 'qr') {
     const it = _items[b.dataset.key]; if (it) showQR(coUrl(it.type, it.id), it.name);
   } else if (act === 'del') {
@@ -1873,7 +1820,7 @@ function renderCols(cols, txns) {
   if (!g2) return;
   if (!cols.length) { g2.innerHTML = empt('📋', 'No collections yet.'); return; }
   g2.innerHTML = cols.map(c => {
-    const cnt = txns.filter(t => t.source_id === c.id && t.status === 'succeeded').length;
+    const cnt = txns.filter(t => t.item_id === c.id && t.status !== 'refunded').length;
     return `<div class="cc"><div class="cct bl"></div>
       <span class="cbdg bbl">Collection</span>
       <div class="cn">${esc(c.name)}</div>
@@ -1884,7 +1831,10 @@ function renderCols(cols, txns) {
   }).join('');
 }
 
+let _subCount = {};
 function renderSubs(subs) {
+  _subCount = {};
+  (_dash?.subscriptions || []).forEach(x => { if (x.status === 'active' || x.status === 'past_due') _subCount[x.item_id] = (_subCount[x.item_id] || 0) + 1; });
   const g2 = g('subs-g');
   if (!g2) return;
   if (!subs.length) { g2.innerHTML = empt('🔄', 'No subscription plans yet.'); return; }
@@ -1895,8 +1845,8 @@ function renderSubs(subs) {
       <div class="cn">${esc(s.name)}</div>
       <div class="ca">${fmtAmt(s.amount, s.currency)}<small style="font-size:.68rem;color:var(--ink2)">/${cy.toLowerCase()}</small></div>
       <div class="cd">${esc(s.description || '')}</div>
-      <div class="cm">Created ${fd(s.created_at)}</div>
-      ${cardActions('sub', s, '💳 Subscribe', 'vy_subscriptions')}</div>`;
+      <div class="cm">Created ${fd(s.created_at)} · ${_subCount[s.id] || 0} active subscriber${_subCount[s.id] === 1 ? '' : 's'}</div>
+      ${cardActions('sub', s, '🔗 Open checkout', 'vy_subscriptions')}</div>`;
   }).join('');
 }
 
@@ -1916,59 +1866,175 @@ function renderLnks(lnks) {
   }).join('');
 }
 
-function renderTxns(txns, cols, subs, lnks) {
+function renderTxns(txns) {
   const tb = g('all-txn');
   if (!tb) return;
   if (!txns.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--ink3)">No transactions yet</td></tr>'; return; }
-  // Transactions don't store a currency, so take it from the item they were paid against.
-  const curOf = {};
-  [].concat(cols || [], subs || [], lnks || []).forEach(i => { curOf[i.id] = i.currency || 'USD'; });
-  tb.innerHTML = txns.map(t => {
-    const cur = curOf[t.source_id] || 'USD';
-    return `<tr>
+  const statusPill = t =>
+    t.status === 'succeeded' ? '<span class="pill pg">✓ Paid</span>' :
+    t.status === 'refunded' ? '<span class="pill pr">Refunded</span>' :
+    '<span class="pill pgo">Part refunded</span>';
+  tb.innerHTML = txns.map(t => `<tr>
     <td>${fd(t.created_at)}</td>
     <td>${t.payer_name ? '<strong>' + esc(t.payer_name) + '</strong>' : '<span style="color:var(--ink3)">—</span>'}</td>
     <td>${esc(t.description || '')}</td>
-    <td>${fmtAmt(t.gross_amount, cur)}</td>
-    <td style="color:var(--grn)">${fmtAmt(t.net_amount, cur)}</td>
-    <td><span class="pill pb">${esc(t.payment_method || 'PayPal')}</span></td>
-    <td><span class="pill ${t.status === 'succeeded' ? 'pg' : 'pr'}">${t.status === 'succeeded' ? '✓ Paid' : esc(t.status)}</span></td>
-  </tr>`;
-  }).join('');
+    <td>${fmtAmt(t.gross_amount, t.currency)}</td>
+    <td style="color:var(--grn)">${fmtAmt(t.net_amount, t.currency)}</td>
+    <td><span class="pill pb">${esc(t.payment_method)}</span></td>
+    <td>${statusPill(t)}</td>
+  </tr>`).join('');
 }
 
-function renderWdPanel(wds, balance) {
-  if (!g('wd-avail')) return;
-  sv('wd-avail', fm(balance));
-  const warn = g('wd-warn');
-  if (warn) {
-    warn.classList.toggle('hidden', balance >= PP_MIN_WD);
-    warn.textContent = balance <= 0
-      ? '⚠️ You have no balance to withdraw yet.'
-      : '⚠️ Your balance (' + fm(balance) + ') is below the ' + fm(PP_MIN_WD) + ' PayPal minimum (' + fm(BK_MIN_WD) + ' for bank).';
+function renderSubscribers(list, plans) {
+  const tb = g('subs-tbl'); if (!tb) return;
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--ink3)">No subscribers yet — share a plan link</td></tr>'; return; }
+  const planName = {}; (plans || []).forEach(p => { planName[p.id] = p.name; });
+  const pill = st => st === 'active' ? '<span class="pill pg">Active</span>' : st === 'past_due' ? '<span class="pill pgo">Payment failed</span>' : '<span class="pill pr">Cancelled</span>';
+  tb.innerHTML = list.map(x => `<tr>
+    <td>${fd(x.created_at)}</td>
+    <td>${esc(x.payer_name || '')}<div style="font-size:.7rem;color:var(--ink3)">${esc(x.payer_email)}</div></td>
+    <td>${esc(planName[x.item_id] || '—')} <span style="font-size:.7rem;color:var(--ink3)">${esc(String(x.cycle).toLowerCase())}</span></td>
+    <td>${fmtAmt(x.amount, x.currency)}</td>
+    <td><span class="pill pb">${esc(x.method)}</span></td>
+    <td>${pill(x.status)}</td>
+    <td>${x.status === 'active' || x.status === 'past_due' ? `<button class="bxs rd" onclick="cancelSubscriber('${esc(x.id)}',this)">Cancel</button>` : ''}</td>
+  </tr>`).join('');
+}
+
+async function cancelSubscriber(id, btn) {
+  if (!confirm('Cancel this subscription? The customer will not be charged again.')) return;
+  if (btn) btn.disabled = true;
+  const d = await apiToast('POST', '/api/subscriptions/' + encodeURIComponent(id) + '/cancel');
+  if (btn) btn.disabled = false;
+  if (!d) return;
+  toast('Subscription cancelled', 'ok');
+  await loadUserData();
+}
+
+function renderAccount(d) {
+  const u = d.user;
+  sv('acct-email', u.email);
+  const st = g('acct-email-st');
+  if (st) st.innerHTML = u.email_verified ? '<span class="pill pg">Confirmed</span>' : '<span class="pill pgo">Not confirmed</span> <button class="bxs" onclick="resendVerification(this)">Resend</button>';
+  const pwNote = g('acct-pw-note');
+  if (pwNote) pwNote.textContent = u.has_password ? 'Changing your password signs you out on other devices.' : 'You sign in with Google. Set a password if you also want to sign in with email.';
+  if (g('acct-pw-title')) g('acct-pw-title').textContent = u.has_password ? 'Password' : 'Set a password';
+  if (g('ac-pw-cur-wrap')) g('ac-pw-cur-wrap').style.display = u.has_password ? '' : 'none';
+  if (g('ac-pw-btn')) g('ac-pw-btn').textContent = u.has_password ? 'Change password' : 'Set password';
+  if (g('acct-email-form')) g('acct-email-form').style.display = u.has_password ? '' : 'none';
+  if (g('ac-notify')) g('ac-notify').checked = !!u.notify_sales;
+  if (g('ac-del-pw-wrap')) g('ac-del-pw-wrap').style.display = u.has_password ? '' : 'none';
+  if (g('ac-del-confirm-wrap')) g('ac-del-confirm-wrap').style.display = u.has_password ? 'none' : '';
+}
+
+async function changeEmail() {
+  const email = gi('ac-email').toLowerCase(), password = g('ac-email-pw').value;
+  if (!email) { toast('Enter the new email', 'er'); return; }
+  setBL('ac-email-btn', true, 'Saving…');
+  const d = await apiToast('POST', '/api/account/email', { email, password });
+  setBL('ac-email-btn', false, 'Change email');
+  if (!d) return;
+  g('ac-email').value = ''; g('ac-email-pw').value = '';
+  toast('Email changed — check ' + email + ' for a confirmation link ✓', 'ok');
+  await loadUserData();
+}
+
+async function changePassword() {
+  const cur = g('ac-pw-cur').value, nw = g('ac-pw-new').value;
+  if (nw.length < 8) { toast('New password must be 8+ characters', 'er'); return; }
+  setBL('ac-pw-btn', true, 'Saving…');
+  const d = await apiToast('POST', '/api/account/password', { current_password: cur, new_password: nw });
+  setBL('ac-pw-btn', false, 'Change password');
+  if (!d) return;
+  g('ac-pw-cur').value = ''; g('ac-pw-new').value = '';
+  toast('Password changed. Other devices were signed out ✓', 'ok');
+  await loadUserData();
+}
+
+async function saveNotify() {
+  const on = g('ac-notify').checked;
+  const d = await apiToast('PATCH', '/api/account/settings', { notify_sales: on });
+  if (d) toast(on ? 'You will get an email for each payment' : 'Payment emails turned off', 'ok');
+}
+
+async function logoutAll() {
+  if (!confirm('Sign out of every device, including this one?')) return;
+  const d = await apiToast('POST', '/api/account/logout-all');
+  if (d) { handleSignedOut(); toast('Signed out everywhere'); }
+}
+
+async function deleteAccount() {
+  if (!confirm('Delete your VyCheckout account permanently?')) return;
+  setBL('ac-del-btn', true, 'Deleting…');
+  const d = await apiToast('DELETE', '/api/account', { password: g('ac-del-pw')?.value || '', confirm: gi('ac-del-confirm') });
+  setBL('ac-del-btn', false, 'Delete my account');
+  if (!d) return;
+  handleSignedOut();
+  toast('Your account was deleted');
+}
+
+// Withdrawals are per currency: each currency has its own balance
+let _wdBalances = {};
+
+let _wdHeld = {}, _wdNext = {}, _holdDays = 7;
+function renderWdPanel(wds, balances, held, nextRelease, holdDays) {
+  _wdBalances = balances || {};
+  _wdHeld = held || {}; _wdNext = nextRelease || {}; _holdDays = holdDays ?? 7;
+  const sel = g('wd-cur');
+  if (sel) {
+    const prev = sel.value;
+    const curs = [...new Set([...Object.keys(_wdBalances).filter(c => _wdBalances[c] > 0), ...Object.keys(_wdHeld)])];
+    if (!curs.length) curs.push(prev || 'USD');
+    sel.innerHTML = curs.map(c => `<option value="${esc(c)}">${CF(c)} ${esc(c)}</option>`).join('');
+    if (curs.includes(prev)) sel.value = prev;
   }
+  onWdCur();
 
   const tb = g('wd-hist');
   if (!tb) return;
   if (!wds.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--ink3)">No withdrawals yet</td></tr>'; return; }
   tb.innerHTML = wds.map(w => `<tr>
-    <td>${fd(w.created_at)}</td><td>${fm(w.amount)}</td><td>${esc(w.method || '')}</td>
+    <td>${fd(w.created_at)}</td><td>${fmtAmt(w.amount, w.currency)}</td><td>${esc(w.method || '')}</td>
     <td style="font-size:.73rem;color:var(--ink2)">${esc(w.destination || '')}</td>
     <td><span class="pill ${w.status === 'completed' ? 'pg' : w.status === 'rejected' ? 'pr' : w.status === 'approved' ? 'pb' : 'pgo'}">${esc(w.status)}</span></td>
-    <td style="font-size:.73rem;color:var(--ink2)">${esc(w.admin_note || w.note || w.notes || '')}</td>
+    <td style="font-size:.73rem;color:var(--ink2)">${esc(w.admin_note || w.notes || '')}</td>
   </tr>`).join('');
+}
+
+function onWdCur() {
+  const cur = g('wd-cur')?.value || 'USD';
+  const bal = _wdBalances[cur] || 0;
+  sv('wd-avail', fmtAmt(bal, cur));
+  const hb = g('wd-held');
+  if (hb) {
+    const h = _wdHeld[cur];
+    hb.style.display = h ? '' : 'none';
+    if (h) hb.textContent = '⏳ ' + fmtAmt(h, cur) + ' is on hold. The next part becomes available on ' + fd(_wdNext[cur]) +
+      '. New payments wait ' + _holdDays + ' days before you can withdraw them, so refunds and chargebacks can be covered.';
+  }
+  const pp = minWd('paypal', cur), bk = minWd('bank', cur);
+  document.querySelectorAll('.wd-min-pp').forEach(e => e.textContent = 'min ' + fmtAmt(pp, cur));
+  document.querySelectorAll('.wd-min-bk').forEach(e => e.textContent = 'min ' + fmtAmt(bk, cur));
+  document.querySelectorAll('.wd-minv-pp').forEach(e => e.textContent = fmtAmt(pp, cur));
+  document.querySelectorAll('.wd-minv-bk').forEach(e => e.textContent = fmtAmt(bk, cur));
+  const warn = g('wd-warn');
+  if (warn) {
+    warn.classList.toggle('hidden', bal >= pp);
+    warn.textContent = bal <= 0
+      ? '⚠️ You have no ' + cur + ' balance to withdraw yet.'
+      : '⚠️ Your balance (' + fmtAmt(bal, cur) + ') is below the ' + fmtAmt(pp, cur) + ' PayPal minimum (' + fmtAmt(bk, cur) + ' for bank).';
+  }
 }
 
 function renderRef(refs, refEarned) {
   if (!g('ref-cnt')) return;
   refs = refs || [];
   sv('ref-cnt', String(refs.length));
-  sv('ref-earn', fm(refEarned || 0));
-
+  sv('ref-earn', fmMulti(refEarned));
   const tb = g('ref-tbl');
   if (!tb) return;
   if (!refs.length) {
-    tb.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--ink3)">No referrals yet — share your link to start earning 1%</td></tr>';
+    tb.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--ink3)">No referrals yet — share your link to start earning ' + CFG.referral_pct + '%</td></tr>';
     return;
   }
   tb.innerHTML = refs.map(r => `<tr>
@@ -2001,80 +2067,71 @@ function quickNav(id) {
 // ═══════════════════════════════════════════════
 // CREATE ITEMS
 // ═══════════════════════════════════════════════
+// Saves an item. If the create form already saved this exact item for a preview payment, reuses it.
+async function saveItem(type, body, btnId, btnText) {
+  const sig = [body.name, body.amount, body.currency].join('|');
+  const pre = _previewSaved[type];
+  let item;
+  if (pre && pre.sig === sig) {
+    item = { id: pre.id };
+  } else {
+    setBL(btnId, true, 'Saving…');
+    const d = await apiToast('POST', '/api/items', Object.assign({ type }, body));
+    setBL(btnId, false, btnText);
+    if (!d) return null;
+    item = d.item;
+  }
+  delete _previewSaved[type];
+  return item;
+}
+
 async function createCol() {
   if (!currentUser) { toast('Please log in first', 'er'); return; }
-  const uid  = currentUser.id;
-  const name = (g('nc-n')?.value || '').trim();
-  const amt  = parseFloat(g('nc-a')?.value || '0');
-  const cur  = g('nc-c')?.value || 'USD';
-  const desc = (g('nc-d')?.value || '').trim();
+  const name = gi('nc-n'), amt = parseFloat(gi('nc-a') || '0'), cur = gi('nc-c') || 'USD', desc = gi('nc-d');
   if (!name) { toast('Enter a collection name', 'er'); g('nc-n')?.focus(); return; }
-  if (!amt || amt < 0.5) { toast('Enter an amount (min $0.50)', 'er'); g('nc-a')?.focus(); return; }
-  setBL('nc-btn', true, 'Saving…');
-  const row = await sbInsert('vy_collections', { user_id: uid, name, amount: amt, currency: cur, description: desc });
-  setBL('nc-btn', false, 'Save Collection');
-  if (!row) return;
-  const link = coUrl('col', row.id);
-  showCreatedLink('Collection created!', name, link);
-  if(g('nc-n')) g('nc-n').value='';
-  if(g('nc-a')) g('nc-a').value='';
-  if(g('nc-d')) g('nc-d').value='';
-
-  if(g('nc-pay-box')) g('nc-pay-box').style.display='none';
+  if (!amt || amt < 0.5) { toast('Enter an amount (min 0.50)', 'er'); g('nc-a')?.focus(); return; }
+  const item = await saveItem('col', { name, amount: amt, currency: cur, description: desc }, 'nc-btn', 'Save Collection');
+  if (!item) return;
+  showCreatedLink('Collection created!', name, coUrl('col', item.id));
+  ['nc-n', 'nc-a', 'nc-d'].forEach(id => { if (g(id)) g(id).value = ''; });
+  if (g('nc-pay-box')) g('nc-pay-box').style.display = 'none';
   await loadUserData();
 }
 
 async function createSub() {
   if (!currentUser) { toast('Please log in first', 'er'); return; }
-  const uid  = currentUser.id;
-  const name = (g('ns-n')?.value || '').trim();
-  const amt  = parseFloat(g('ns-a')?.value || '0');
-  const cur  = g('ns-c')?.value || 'USD';
-  const cy   = g('ns-cy')?.value || 'MONTHLY';
-  const desc = (g('ns-d')?.value || '').trim();
-  if (!name)            { toast('Enter a plan name', 'er'); g('ns-n')?.focus(); return; }
-  if (!amt || amt < 0.5){ toast('Enter an amount (min $0.50)', 'er'); g('ns-a')?.focus(); return; }
-  setBL('ns-btn', true, 'Saving…');
-  const row = await sbInsert('vy_subscriptions', { user_id: uid, name, amount: amt, currency: cur, cycle: cy, description: desc });
-  setBL('ns-btn', false, 'Save Plan');
-  if (!row) return;
-  const link = coUrl('sub', row.id);
-  showCreatedLink('Subscription plan created!', name + ' · ' + cy.toLowerCase(), link);
-  if(g('ns-n')) g('ns-n').value='';
-  if(g('ns-a')) g('ns-a').value='';
-  if(g('ns-d')) g('ns-d').value='';
-  if(g('ns-pay-box')) g('ns-pay-box').style.display='none';
+  const name = gi('ns-n'), amt = parseFloat(gi('ns-a') || '0'), cur = gi('ns-c') || 'USD', cy = gi('ns-cy') || 'MONTHLY', desc = gi('ns-d');
+  if (!name) { toast('Enter a plan name', 'er'); g('ns-n')?.focus(); return; }
+  if (!amt || amt < 0.5) { toast('Enter an amount (min 0.50)', 'er'); g('ns-a')?.focus(); return; }
+  const item = await saveItem('sub', { name, amount: amt, currency: cur, cycle: cy, description: desc }, 'ns-btn', 'Save Plan');
+  if (!item) return;
+  showCreatedLink('Subscription plan created!', name + ' · ' + cy.toLowerCase(), coUrl('sub', item.id));
+  ['ns-n', 'ns-a', 'ns-d'].forEach(id => { if (g(id)) g(id).value = ''; });
+  if (g('ns-pay-box')) g('ns-pay-box').style.display = 'none';
   await loadUserData();
 }
 
 async function createLink() {
   if (!currentUser) { toast('Please log in first', 'er'); return; }
-  const uid  = currentUser.id;
-  const name = (g('nl-n')?.value || '').trim();
-  const amt  = parseFloat(g('nl-a')?.value || '0');
-  const cur  = g('nl-c')?.value || 'USD';
-  const expD = parseInt(g('nl-e')?.value || '0');
-  const note = (g('nl-no')?.value || '').trim();
-  if (!name)            { toast('Enter a title for your link', 'er'); g('nl-n')?.focus(); return; }
-  if (!amt || amt < 0.5){ toast('Enter an amount (min $0.50)', 'er'); g('nl-a')?.focus(); return; }
-  const expires_at = expD ? new Date(Date.now() + expD * 86400000).toISOString() : null;
-  setBL('nl-btn', true, 'Generating…');
-  const row = await sbInsert('vy_pay_links', { user_id: uid, name, amount: amt, currency: cur, note, expires_at });
-  setBL('nl-btn', false, 'Save & Get Link');
-  if (!row) return;
-  const link = coUrl('lnk', row.id);
-  showCreatedLink('Payment link ready!', name, link);
-  if(g('nl-n')) g('nl-n').value='';
-  if(g('nl-a')) g('nl-a').value='';
-  if(g('nl-no')) g('nl-no').value='';
-  if(g('nl-pay-box')) g('nl-pay-box').style.display='none';
+  const name = gi('nl-n'), amt = parseFloat(gi('nl-a') || '0'), cur = gi('nl-c') || 'USD', note = gi('nl-no');
+  const expires_days = parseInt(gi('nl-e') || '0', 10);
+  if (!name) { toast('Enter a title for your link', 'er'); g('nl-n')?.focus(); return; }
+  if (!amt || amt < 0.5) { toast('Enter an amount (min 0.50)', 'er'); g('nl-a')?.focus(); return; }
+  const item = await saveItem('lnk', { name, amount: amt, currency: cur, note, expires_days }, 'nl-btn', 'Save &amp; Get Link');
+  if (!item) return;
+  showCreatedLink('Payment link ready!', name, coUrl('lnk', item.id));
+  ['nl-n', 'nl-a', 'nl-no'].forEach(id => { if (g(id)) g(id).value = ''; });
+  if (g('nl-pay-box')) g('nl-pay-box').style.display = 'none';
   await loadUserData();
 }
 
-async function delItem(table, id) {
-  if (!confirm('Delete this item? This cannot be undone.')) return;
-  await sbDelete(table, id);
-  toast('Deleted', 'ok');
+async function delItem(_table, id) {
+  const isPlan = (_dash?.items || []).some(i => i.id === id && i.type === 'sub');
+  if (!confirm(isPlan ? 'Delete this plan? Its link stops working and every subscriber is cancelled (no more charges).' : 'Delete this item? Its payment link will stop working.')) return;
+  const d = await apiToast('DELETE', '/api/items/' + encodeURIComponent(id));
+  if (!d) return;
+  toast(d.cancelled ? 'Deleted — ' + d.cancelled + ' subscription' + (d.cancelled === 1 ? '' : 's') + ' cancelled' : 'Deleted', 'ok');
+  if (d.cancel_failed) toast(d.cancel_failed + ' subscription(s) could not be cancelled with the payment provider — check the Subscribers list', 'er');
   await loadUserData();
 }
 
@@ -2114,58 +2171,34 @@ function getBankDet(c) {
 }
 
 async function submitWd(method) {
-  const uid = currentUser?.id; if (!uid) return;
+  if (!currentUser) return;
   const isPayPal = method === 'paypal';
+  const cur = g('wd-cur')?.value || 'USD';
   const amt = parseFloat(isPayPal ? gi('pp-amt') : gi('bk-amt'));
-  const minAmt = isPayPal ? PP_MIN_WD : BK_MIN_WD;
-  if (!amt || amt < minAmt) { toast('Minimum is $' + minAmt + ' for ' + (isPayPal ? 'PayPal' : 'bank'), 'er'); return; }
+  const min = minWd(method, cur);
+  if (!amt || amt < min) { toast('Minimum is ' + fmtAmt(min, cur) + ' for ' + (isPayPal ? 'PayPal' : 'bank'), 'er'); return; }
+  if (amt > (_wdBalances[cur] || 0)) { toast('Insufficient balance. Available: ' + fmtAmt(_wdBalances[cur] || 0, cur), 'er'); return; }
 
-  const bal = currentProfile?.balance || 0;
-  if (amt > bal) { toast('Insufficient balance. Available: ' + fm(bal), 'er'); return; }
-
-  let destination = '', bank_details = null, country = '';
+  const body = { currency: cur, amount: amt, method, notes: isPayPal ? gi('pp-notes') : gi('bk-notes') };
   if (isPayPal) {
-    destination = gi('pp-email');
-    if (!destination) { toast('Enter your PayPal email', 'er'); return; }
-    country = 'PayPal';
+    body.paypal_email = gi('pp-email');
+    if (!body.paypal_email) { toast('Enter your PayPal email', 'er'); return; }
   } else {
     const c = g('wd-cnt')?.value;
     if (!c) { toast('Select your country', 'er'); return; }
-    bank_details = getBankDet(c);
-    if (!bank_details) { toast('Please complete your bank details', 'er'); return; }
-    const opt = g('wd-cnt').options[g('wd-cnt').selectedIndex];
-    country = opt.text;
-    destination = bank_details.holder + (bank_details.account ? ' ****' + String(bank_details.account).slice(-4) : '');
+    const det = getBankDet(c);
+    if (!det) { toast('Please complete your bank details', 'er'); return; }
+    body.country = g('wd-cnt').options[g('wd-cnt').selectedIndex].text;
+    body.bank_details = det;
   }
 
-  const notes = isPayPal ? gi('pp-notes') : gi('bk-notes');
   const btnId = isPayPal ? 'pp-wd-btn' : 'bk-wd-btn';
   setBL(btnId, true, 'Submitting…');
-
-  const { error: wdErr } = await sb.rpc('submit_withdrawal', {
-    p_user_id:    uid,
-    p_user_name:  currentProfile?.full_name || '',
-    p_user_email: currentUser.email || '',
-    p_amount:     amt,
-    p_method:     isPayPal ? 'PayPal' : 'Bank Transfer',
-    p_destination: destination,
-    p_country:    country,
-    p_bank_details: bank_details ? JSON.stringify(bank_details) : null,
-    p_notes:      notes || null
-  });
-
+  const d = await apiToast('POST', '/api/withdrawals', body);
   setBL(btnId, false, isPayPal ? 'Request PayPal Payout' : 'Request Bank Transfer');
-  if (wdErr) { toast('Failed to submit: ' + wdErr.message, 'er'); console.error(wdErr); return; }
+  if (!d) return;
 
   toast('Withdrawal request submitted! We will review and process within 5–14 business days ✓', 'ok');
-  // Notify admin
-  notify('withdrawal_requested', {
-    user_name: currentProfile?.full_name || '',
-    user_email: currentUser?.email || '',
-    amount: amt,
-    method: isPayPal ? 'PayPal' : 'Bank Transfer',
-    destination
-  });
   const amtEl = g(isPayPal ? 'pp-amt' : 'bk-amt');
   if (amtEl) amtEl.value = '';
   await loadUserData();
@@ -2189,7 +2222,7 @@ function loadPayPalSDK(currency, cb) {
 
   const script = document.createElement('script');
   script.src = 'https://www.paypal.com/sdk/js'
-    + '?client-id=' + window.__PP_CID
+    + '?client-id=' + encodeURIComponent(CFG.paypal_client_id || '')
     + '&currency=' + currency
     + '&intent=capture'
     + '&enable-funding=card,credit,paylater,venmo'
@@ -2223,6 +2256,11 @@ function renderPPButtons(containerId, item, onSuccess) {
   // Show spinner while loading
   el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:.5rem;padding:1rem;font-size:.8rem;color:var(--ink2)"><div style="width:16px;height:16px;border:2px solid var(--bord);border-top-color:var(--acc);border-radius:50%;animation:sp .7s linear infinite;"></div>Loading payment options…</div>';
 
+  if (!CFG.paypal_client_id) {
+    el.innerHTML = '<div style="color:var(--red);font-size:.8rem;padding:.6rem">PayPal is not set up yet.</div>';
+    return;
+  }
+
   loadPayPalSDK(currency, function() {
     // Re-get element — DOM may have changed
     const container = document.getElementById(containerId);
@@ -2248,26 +2286,31 @@ function renderPPButtons(containerId, item, onSuccess) {
           tagline: false
         },
 
-        createOrder: function(data, actions) {
-          return actions.order.create({
-            intent: 'CAPTURE',
-            purchase_units: [{
-              amount: {
-                value:         isZD(currency) ? String(Math.round(amt)) : amt.toFixed(2),
-                currency_code: currency
-              },
-              description: (item.name || 'VyCheckout Payment').substring(0, 127)
-            }]
-          });
+        // The Worker prices the order from the saved item; the browser only says which item (and,
+        // for "any amount" links, how much the payer chose).
+        createOrder: async function() {
+          try {
+            const itemId = item.ensureId ? await item.ensureId() : item.id;
+            const d = await api('POST', '/api/pay/paypal/order', {
+              item_id: itemId,
+              amount: (item.custom || item.custom_amount) ? amt : undefined,
+            });
+            return d.id;
+          } catch (e) {
+            toast(e.message, 'er');
+            throw e;
+          }
         },
 
-        onApprove: function(data, actions) {
-          return actions.order.capture().then(function(details) {
-            onSuccess(details);
-          }).catch(function(err) {
-            console.error('Capture error:', err);
-            toast('Payment capture failed — please try again', 'er');
-          });
+        // The Worker captures the payment with PayPal and records it only if PayPal confirms it.
+        onApprove: async function(data) {
+          try {
+            const d = await api('POST', '/api/pay/paypal/capture', { order_id: data.orderID });
+            if (d.pending) { toast(d.message); return; }
+            onSuccess(d.receipt);
+          } catch (e) {
+            toast(e.message, 'er');
+          }
         },
 
         onCancel: function() {
@@ -2323,11 +2366,10 @@ function openPay(item) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       scInit('m-sc', ctx);
-      renderPPButtons('pp-modal-container', ctx, async (details) => {
+      renderPPButtons('pp-modal-container', ctx, (receipt) => {
         closePay();
-        const txn = await recordPayment(ctx, 'PayPal', details);
-        showReceipt(ctx, 'PayPal', txn?.id);
-        setTimeout(() => loadUserData(), 800);
+        showReceipt(receipt);
+        setTimeout(() => loadUserData(), 300);
       });
     });
   });
@@ -2397,81 +2439,6 @@ document.addEventListener('click', e => {
   if (ovl && e.target === ovl) closeLm();
 });
 
-// Records a successful payment for ownerId (defaults to the logged-in user) and credits the referrer.
-// Returns the inserted transaction row (or null).
-async function recordPayment(item, method, payerDetails, ownerId) {
-  ownerId = ownerId || (currentUser && currentUser.id);
-  if (!ownerId) return null;
-  const gross = +(+item.amount).toFixed(2);
-  const fee = +(gross * PLATFORM_FEE).toFixed(2);
-  const net = +(gross - fee).toFixed(2);
-
-  // Extract payer name from PayPal details object
-  let payerName = '';
-  if (payerDetails) {
-    const payer = payerDetails.payer || payerDetails;
-    const given = payer?.name?.given_name || '';
-    const sur   = payer?.name?.surname || '';
-    payerName = (given + ' ' + sur).trim();
-    if (!payerName && payer?.email_address) payerName = payer.email_address;
-  }
-
-  // Referral commission for the owner's referrer
-  const { data: prof } = await sb.from('profiles').select('referrer_id').eq('id', ownerId).single();
-  let refAmt = 0, refId = null;
-  if (prof?.referrer_id && prof.referrer_id !== ownerId) {
-    refAmt = +(gross * REFERRAL_PCT).toFixed(2);
-    refId = prof.referrer_id;
-    // sb.rpc resolves with { error } rather than throwing, so check it explicitly
-    const { error: rpcErr } = await sb.rpc('increment_ref_balance', { p_user_id: refId, p_amount: refAmt });
-    if (rpcErr) {
-      const { data: rd } = await sb.from('profiles').select('balance,ref_earned').eq('id', refId).single();
-      if (rd) await sb.from('profiles').update({ balance: (+rd.balance || 0) + refAmt, ref_earned: (+rd.ref_earned || 0) + refAmt }).eq('id', refId);
-    }
-  }
-
-  const txnRow = await sbInsert('vy_transactions', {
-    user_id:        ownerId,
-    source_id:      item.id || null,
-    source_type:    item.type,
-    description:    item.name,
-    payer_name:     payerName || null,
-    gross_amount:   gross,
-    net_amount:     net,
-    fee_amount:     fee,
-    payment_method: method,
-    status:         'succeeded',
-    referrer_id:    refId,
-    referral_amount: refAmt,
-    referral_to:    refId || null,
-  });
-
-  // Fire developer webhook if registered
-  if (currentUser && ownerId === currentUser.id && currentProfile?.webhook_url) {
-    try {
-      fetch(currentProfile.webhook_url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        mode: 'no-cors',
-        body: JSON.stringify({
-          event: 'payment.succeeded',
-          data: {
-            transaction_id: txnRow?.id || null,
-            amount: gross,
-            net_amount: net,
-            currency: item.currency || 'USD',
-            payer_name: payerName || null,
-            description: item.name,
-            payment_method: method,
-            created_at: new Date().toISOString()
-          }
-        })
-      }).catch(() => {});
-    } catch(e) {}
-  }
-  return txnRow;
-}
-
 // ═══════════════════════════════════════════════
 // PUBLIC CHECKOUT
 // ═══════════════════════════════════════════════
@@ -2479,23 +2446,21 @@ let coCtx = null;
 
 async function initCheckout(type, id) {
   showView('checkout');
-  // Load item from Supabase
-  const tables = { col: 'vy_collections', sub: 'vy_subscriptions', lnk: 'vy_pay_links' };
-  const table = tables[type];
-  if (!table) { g('co-card').innerHTML = errCard('Invalid link', 'This link is not valid.'); return; }
+  if (!['col', 'sub', 'lnk'].includes(type)) { g('co-card').innerHTML = errCard('Invalid link', 'This link is not valid.'); return; }
 
-  const { data: item } = await sb.from(table).select('*').eq('id', id).single();
-  if (!item) { g('co-card').innerHTML = errCard('Not found', 'This link may have been removed.'); return; }
-  if (type === 'lnk' && item.expires_at && new Date(item.expires_at) < new Date()) {
-    g('co-card').innerHTML = errCard('Link expired', 'Ask the sender for a new link.'); return;
-  }
+  let d;
+  try { d = await api('GET', '/api/public/items/' + encodeURIComponent(id)); }
+  catch (e) { g('co-card').innerHTML = errCard('Not found', 'This link may have been removed.'); return; }
+  const item = d.item;
+  if (item.type !== type) { g('co-card').innerHTML = errCard('Not found', 'This link may have been removed.'); return; }
+  if (item.expired) { g('co-card').innerHTML = errCard('Link expired', 'Ask the sender for a new link.'); return; }
 
-  const { data: owner } = await sb.from('profiles').select('business_name, full_name').eq('id', item.user_id).single();
-  const business = owner?.business_name || owner?.full_name || 'VyCheckout';
+  const business = d.business;
   const cur = item.currency || 'USD';
-  coCtx = { type, owner, item: { ...item, type, amount: +item.amount, currency: cur, business } };
+  coCtx = { type, item: { ...item, amount: +item.amount, currency: cur, business } };
   const isSub = type === 'sub';
   const isCustomAmt = item.custom_amount === true;
+  const cycle = (item.cycle || 'MONTHLY').toLowerCase();
 
   g('co-card').innerHTML = `
     <div class="co-hd">
@@ -2509,43 +2474,172 @@ async function initCheckout(type, id) {
                placeholder="Enter amount" min="1" step="${isZD(cur) ? '1' : '0.01'}"
                oninput="updateCustomAmt('${esc(cur)}')">
            </div>`
-        : `<div class="price">${fmtAmt(item.amount, cur)}</div>`}
-      ${isSub ? `<div class="desc">Billed ${esc((item.cycle || 'monthly').toLowerCase())}. This payment covers the first period — automatic renewal isn't active yet.</div>` : ''}
+        : `<div class="price">${fmtAmt(item.amount, cur)}${isSub ? `<span style="font-size:.9rem;font-weight:600;opacity:.7"> / ${esc(cycle.replace('ly', '').replace('annual', 'year'))}</span>` : ''}</div>`}
+      ${isSub ? `<div class="desc">Charged ${esc(cycle)} until you cancel. You can cancel any time from your receipt email.</div>` : ''}
       ${item.description ? `<div class="desc">${esc(item.description)}</div>` : ''}
       ${item.note ? `<div class="desc">${esc(item.note)}</div>` : ''}
     </div>
     <div class="co-bd">
       ${isCustomAmt ? `<button class="ba" id="co-confirm-btn" style="width:100%;margin-bottom:.9rem" onclick="confirmCustomAmt()">Confirm Amount &amp; Pay</button>` : ''}
-      <div id="paypal-checkout-container" style="margin-top:.2rem;${isCustomAmt ? 'display:none' : ''}"></div>
-      <div style="font-size:.67rem;color:var(--ink3);text-align:center;margin-top:.7rem;line-height:1.5;">🔒 Secured by PayPal · All major cards accepted</div>
+      <div id="co-pay" style="${isCustomAmt ? 'display:none' : ''}">
+        <div class="co-fields">
+          ${isSub ? '<input type="text" id="co-name" placeholder="Your name" autocomplete="name">' : ''}
+          <input type="email" id="co-email" placeholder="Email for your receipt${isSub ? '' : ' (optional for PayPal)'}" autocomplete="email">
+        </div>
+        <div class="pm-tabs"><button class="pm-tab active" onclick="swTab(this,'co-pp-p','co-sc-p')">🅿 PayPal</button><button class="pm-tab" onclick="swTab(this,'co-sc-p','co-pp-p');coCardInit()">💳 Card</button></div>
+        <div class="pm-pane active" id="co-pp-p"><div id="paypal-checkout-container" style="min-height:50px"></div></div>
+        <div class="pm-pane" id="co-sc-p"><div class="sc-wrap"><div id="co-sc"></div></div><div class="sc-err" id="co-sc-err"></div><button class="sc-btn" id="co-sc-btn" onclick="coCardPay()">${isSub ? 'Subscribe with Card' : 'Pay with Card'}</button></div>
+      </div>
+      <div style="font-size:.67rem;color:var(--ink3);text-align:center;margin-top:.7rem;line-height:1.5;">🔒 Payments processed by PayPal and Stripe. Card details never touch our servers.</div>
     </div>`;
 
   // Custom-amount links render buttons only after the payer confirms an amount
   if (!isCustomAmt) renderCheckoutButtons();
 }
 
-// Renders PayPal for the current public checkout item (coCtx.item) and records the payment for its owner.
+function coEmail(required) {
+  const e = gi('co-email').toLowerCase();
+  if (!e && required) { toast('Enter your email for the receipt', 'er'); g('co-email')?.focus(); return null; }
+  if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast('Enter a valid email', 'er'); g('co-email')?.focus(); return null; }
+  return e;
+}
+
+function checkoutDone(receipt) {
+  const it = coCtx.item;
+  const isSub = coCtx.type === 'sub';
+  g('co-card').innerHTML = `
+    <div class="co-hd" style="background:#15803d">
+      <div class="mer">${esc(it.business)}</div>
+      <h2>${isSub ? 'Subscribed!' : 'Payment Successful!'}</h2>
+      <div class="price">${fmtAmt(receipt.amount, receipt.currency)}</div>
+    </div>
+    <div class="co-bd" style="text-align:center;padding:2rem">
+      <div style="font-size:3rem;margin-bottom:.75rem">✅</div>
+      <div style="font-weight:700;margin-bottom:.35rem">Thank you!</div>
+      <div style="font-size:.8rem;color:var(--ink2)">${receipt.pending ? 'Your subscription is active. PayPal is finishing the first payment — your receipt email follows shortly.' : (isSub ? 'Your subscription is active. A receipt with a cancel link was emailed to you.' : 'Your payment has been received. You can close this page.')}</div>
+    </div>`;
+  showReceipt(receipt);
+}
+
+// PayPal buttons on the public checkout: one-time payment, or a recurring subscription
 function renderCheckoutButtons() {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      renderPPButtons('paypal-checkout-container', coCtx.item, async (details) => {
-        const it = Object.assign({}, coCtx.item);
-        const txn = await recordPayment(it, 'PayPal', details, it.user_id);
-        g('co-card').innerHTML = `
-          <div class="co-hd" style="background:#15803d">
-            <div class="mer">${esc(it.business)}</div>
-            <h2>Payment Successful!</h2>
-            <div class="price">${fmtAmt(it.amount, it.currency)}</div>
-          </div>
-          <div class="co-bd" style="text-align:center;padding:2rem">
-            <div style="font-size:3rem;margin-bottom:.75rem">✅</div>
-            <div style="font-weight:700;margin-bottom:.35rem">Thank you!</div>
-            <div style="font-size:.8rem;color:var(--ink2)">Your payment has been received. You can close this page.</div>
-          </div>`;
-        showReceipt(it, 'PayPal', txn?.id);
-      });
+      if (coCtx.type === 'sub') renderPPSubscribe('paypal-checkout-container', coCtx.item, checkoutDone);
+      else renderPPButtons('paypal-checkout-container', coCtx.item, checkoutDone);
     });
   });
+}
+
+// PayPal subscriptions need their own SDK instance (vault=true&intent=subscription)
+const _ppSubNS = {};
+function loadPayPalSubSDK(currency, cb) {
+  const ns = 'paypal_sub_' + currency;
+  if (window[ns]) return cb(window[ns]);
+  if (_ppSubNS[currency]) { _ppSubNS[currency].push(cb); return; }
+  _ppSubNS[currency] = [cb];
+  const sc = document.createElement('script');
+  sc.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(CFG.paypal_client_id || '') + '&vault=true&intent=subscription&currency=' + currency + '&components=buttons';
+  sc.setAttribute('data-namespace', ns);
+  sc.onload = () => { const q = _ppSubNS[currency]; delete _ppSubNS[currency]; q.forEach(f => f(window[ns])); };
+  sc.onerror = () => { const q = _ppSubNS[currency]; delete _ppSubNS[currency]; q.forEach(f => f(null)); };
+  document.head.appendChild(sc);
+}
+
+function renderPPSubscribe(containerId, item, onSuccess) {
+  const el = g(containerId); if (!el) return;
+  if (!CFG.paypal_client_id) { el.innerHTML = '<div style="color:var(--red);font-size:.8rem;padding:.6rem">PayPal is not set up yet.</div>'; return; }
+  el.innerHTML = '<div style="padding:1rem;text-align:center;font-size:.8rem;color:var(--ink2)">Loading PayPal…</div>';
+  loadPayPalSubSDK(item.currency, function(pp) {
+    const box = g(containerId); if (!box) return;
+    box.innerHTML = '';
+    if (!pp) { box.innerHTML = '<div style="color:var(--red);font-size:.8rem;padding:.6rem">PayPal could not load.</div>'; return; }
+    pp.Buttons({
+      style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'subscribe', height: 48, tagline: false },
+      // The Worker checks the item and creates the PayPal plan; PayPal then creates the subscription
+      createSubscription: async function(data, actions) {
+        const email = coEmail(true);
+        if (!email) throw new Error('email required');
+        try {
+          const d = await api('POST', '/api/pay/paypal/subscribe', { item_id: item.id, email, name: gi('co-name') });
+          return actions.subscription.create({ plan_id: d.plan_id, custom_id: d.custom_id, subscriber: { email_address: d.email } });
+        } catch (e) { toast(e.message, 'er'); throw e; }
+      },
+      // The Worker confirms with PayPal that the subscription is active before showing success
+      onApprove: async function(data) {
+        try {
+          const d = await api('POST', '/api/pay/paypal/subscribe/activate', { subscription_id: data.subscriptionID });
+          onSuccess(d.receipt);
+        } catch (e) { toast(e.message, 'er'); }
+      },
+      onCancel: () => toast('Subscription cancelled'),
+      onError: err => { if (String(err && err.message) !== 'email required') toast('PayPal error: ' + (err && err.message || 'unknown'), 'er'); },
+    }).render('#' + containerId).catch(() => { box.innerHTML = '<div style="color:var(--red);font-size:.8rem;padding:.6rem">Could not load PayPal.</div>'; });
+  });
+}
+
+// Card on the public checkout (Stripe Elements)
+function coCardInit() {
+  if (_SE['co-sc'] && g('co-sc')?.querySelector('iframe')) return;
+  scInit('co-sc', coCtx.item);
+  if (!_SE['co-sc']) { const e = g('co-sc-err'); if (e) e.textContent = 'Card payments are not available right now. Please use PayPal.'; }
+}
+
+async function coCardPay() {
+  const sd = _SE['co-sc'];
+  if (!sd) { toast('Card payments are not available right now', 'er'); return; }
+  const isSub = coCtx.type === 'sub';
+  const email = coEmail(isSub);
+  if (email === null) return;
+  const btn = g('co-sc-btn'), err = g('co-sc-err');
+  const label = isSub ? 'Subscribe with Card' : 'Pay with Card';
+  if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
+  if (err) err.textContent = '';
+  try {
+    const item = coCtx.item;
+    const billing = { billing_details: { email: email || undefined, name: gi('co-name') || undefined } };
+    if (isSub) {
+      const s = await api('POST', '/api/pay/stripe/subscribe', { item_id: item.id, email, name: gi('co-name') });
+      const r = await sd.stripe.confirmCardPayment(s.client_secret, { payment_method: Object.assign({ card: sd.card }, billing) });
+      if (r.error) throw new Error(r.error.message);
+      const d = await api('POST', '/api/pay/stripe/subscribe/confirm', { subscription_id: s.subscription_id });
+      checkoutDone(d.receipt);
+    } else {
+      const intent = await api('POST', '/api/pay/stripe/intent', { item_id: item.id, amount: item.custom_amount ? item.amount : undefined, payer_email: email || undefined });
+      const r = await sd.stripe.confirmCardPayment(intent.client_secret, { payment_method: Object.assign({ card: sd.card }, billing) });
+      if (r.error) throw new Error(r.error.message);
+      if (!r.paymentIntent || r.paymentIntent.status !== 'succeeded') throw new Error('The card payment did not complete.');
+      const d = await api('POST', '/api/pay/stripe/confirm', { intent_id: r.paymentIntent.id });
+      checkoutDone(d.receipt);
+    }
+  } catch (e) {
+    if (err) err.textContent = e.message;
+    toast(e.message, 'er');
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
+}
+
+// Subscriber opened the cancel link from their receipt email (?cancel_sub=…)
+async function initCancelSub(token) {
+  showView('checkout');
+  let d;
+  try { d = await api('POST', '/api/public/subscriptions/lookup', { token }); }
+  catch (e) { g('co-card').innerHTML = errCard('Link not valid', 'This cancel link is not valid. Contact the seller if you need help.'); return; }
+  const done = d.status === 'cancelled';
+  g('co-card').innerHTML = `
+    <div class="co-hd"><div class="mer">${esc(d.business)}</div><h2>${esc(d.item)}</h2>
+      <div class="price">${fmtAmt(d.amount, d.currency)}<span style="font-size:.9rem;opacity:.7"> ${esc(String(d.cycle).toLowerCase())}</span></div>
+      <div class="desc">Subscriber: ${esc(d.email)}</div></div>
+    <div class="co-bd" id="cs-bd" style="text-align:center">
+      ${done ? '<div style="font-weight:700">This subscription is already cancelled.</div>'
+             : '<p style="font-size:.82rem;color:var(--ink2);margin-bottom:1rem">Cancel this subscription? You will not be charged again.</p><button class="btn-danger" id="cs-btn">Cancel subscription</button>'}
+    </div>`;
+  const b = g('cs-btn');
+  if (b) b.onclick = async () => {
+    b.disabled = true; b.textContent = 'Cancelling…';
+    try { await api('POST', '/api/public/subscriptions/cancel', { token }); g('cs-bd').innerHTML = '<div style="font-size:2rem">✅</div><div style="font-weight:700">Subscription cancelled</div><div style="font-size:.8rem;color:var(--ink2)">You will not be charged again.</div>'; }
+    catch (e) { toast(e.message, 'er'); b.disabled = false; b.textContent = 'Cancel subscription'; }
+  };
 }
 
 function errCard(title, sub) {
@@ -2585,7 +2679,7 @@ async function renderAdminDash() {
     <div class="panel" id="a-txns">
       <div class="pt">All Transactions <span class="admin-badge">Admin</span></div>
       <div class="ps">Platform-wide payment history</div>
-      <div class="tw"><table><thead><tr><th>Date</th><th>User</th><th>Description</th><th>Gross</th><th>Fee (24%)</th><th>Net</th><th>Method</th></tr></thead><tbody id="adm-txn-tbl"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Date</th><th>User</th><th>Description</th><th>Gross</th><th>Fee</th><th>Net</th><th>Method</th></tr></thead><tbody id="adm-txn-tbl"></tbody></table></div>
     </div>
     <div class="panel" id="a-stats">
       <div class="pt">Platform Stats <span class="admin-badge">Admin</span></div>
@@ -2617,227 +2711,230 @@ async function filterWdAdmin(status, btn) {
 
 async function loadAdminWds() {
   const el = g('wd-requests'); if (!el) return;
-  let q = sb.from('vy_withdrawals').select('*').order('created_at', { ascending: false });
-  if (adminWdFilter !== 'all') q = q.eq('status', adminWdFilter);
-  const { data: wds } = await q;
-  if (!wds?.length) { el.innerHTML = '<div class="empty"><div class="empty-ic">🏦</div><p>No ' + adminWdFilter + ' requests</p></div>'; return; }
+  const d = await apiToast('GET', '/api/admin/withdrawals?status=' + encodeURIComponent(adminWdFilter));
+  if (!d) return;
+  const wds = d.withdrawals;
+  if (!wds.length) { el.innerHTML = '<div class="empty"><div class="empty-ic">🏦</div><p>No ' + esc(adminWdFilter) + ' requests</p></div>'; return; }
 
   el.innerHTML = wds.map(w => {
-    let bankInfo = '';
-    if (w.bank_details) {
-      try {
-        const b = JSON.parse(w.bank_details);
-        bankInfo = Object.entries(b).filter(([,val]) => val).map(([k,val]) => `<strong>${esc(k)}:</strong> ${esc(String(val))}`).join(' · ');
-      } catch(e) {}
-    }
+    const bankInfo = w.bank_details
+      ? Object.entries(w.bank_details).filter(([, val]) => val).map(([k, val]) => `<strong>${esc(k)}:</strong> ${esc(String(val))}`).join(' · ')
+      : '';
+    const id = esc(w.id);
     return `<div class="wr-item">
       <div class="wr-item-head">
         <div>
-          <div class="wr-user">${esc(w.user_name||'Unknown')} <span style="font-weight:400;color:var(--ink2);font-size:.71rem">${esc(w.user_email||'')}</span></div>
+          <div class="wr-user">${esc(w.user_name || 'Unknown')} <span style="font-weight:400;color:var(--ink2);font-size:.71rem">${esc(w.user_email || '')}</span></div>
           <div class="wr-meta">
-            ${fd(w.created_at)} · ${esc(w.method||'')} · ${esc(w.country||'')}
+            ${fd(w.created_at)} · ${esc(w.method || '')} · ${esc(w.country || '')}
             ${w.destination ? ` · <span style="font-family:monospace;font-size:.71rem">${esc(w.destination)}</span>` : ''}
             ${bankInfo ? `<br><span style="font-size:.69rem;color:var(--ink3)">${bankInfo}</span>` : ''}
             ${w.notes ? `<br><em style="font-size:.71rem;color:var(--ink2)">${esc(w.notes)}</em>` : ''}
+            ${w.admin_note ? `<br><span style="font-size:.71rem;color:var(--ink2)">Admin note: ${esc(w.admin_note)}</span>` : ''}
+            ${w.payout_status ? `<br><span style="font-size:.71rem">PayPal payout: <strong>${esc(w.payout_status)}</strong>${w.payout_error ? ' — ' + esc(w.payout_error) : ''}</span>` : ''}
           </div>
         </div>
         <div style="text-align:right">
-          <div class="wr-amount">${fm(w.amount)}</div>
-          <span class="pill ${w.status==='completed'?'pg':w.status==='rejected'?'pr':w.status==='approved'?'pb':'pgo'}">${w.status}</span>
+          <div class="wr-amount">${fmtAmt(w.amount, w.currency)}</div>
+          <span class="pill ${w.status === 'completed' ? 'pg' : w.status === 'rejected' ? 'pr' : w.status === 'approved' ? 'pb' : 'pgo'}">${esc(w.status)}</span>
         </div>
       </div>
       <div class="wr-actions">
-        ${w.status==='pending' ? `<button class="btn-approve" onclick="wdAction('${w.id}','approved',this)">✓ Approve</button><button class="btn-reject" onclick="wdAction('${w.id}','rejected',this)">✕ Reject</button>` : ''}
-        ${w.status==='approved' ? `<button class="btn-mark-paid" onclick="wdAction('${w.id}','completed',this)">✓ Mark as Paid</button><button class="btn-reject" onclick="wdAction('${w.id}','rejected',this)">✕ Reject</button>` : ''}
-        ${w.status==='completed'||w.status==='rejected' ? '<span style="font-size:.72rem;color:var(--ink3)">No further actions</span>' : ''}
+        ${w.status === 'pending' ? `<button class="btn-approve" onclick="wdAction('${id}','approved',this)">✓ Approve</button><button class="btn-reject" onclick="wdAction('${id}','rejected',this)">✕ Reject</button>` : ''}
+        ${w.status === 'approved' ? adminApprovedActions(w, id) : ''}
+        ${w.status === 'completed' || w.status === 'rejected' ? '<span style="font-size:.72rem;color:var(--ink3)">No further actions</span>' : ''}
       </div>
     </div>`;
   }).join('');
 }
 
-async function wdAction(wdId, newStatus, btn) {
+const PAYOUT_BUSY = ['SENDING', 'PENDING', 'ONHOLD', 'UNCLAIMED', 'SUCCESS'];
+function adminApprovedActions(w, id) {
+  const busy = PAYOUT_BUSY.includes(w.payout_status);
+  let h = '';
+  if (w.method === 'PayPal' && !busy) h += `<button class="btn-approve" onclick="sendPayout('${id}',this)">💸 ${w.payout_status ? 'Retry' : 'Send with'} PayPal</button>`;
+  if (busy && w.payout_status !== 'SUCCESS') h += `<button class="btn-mark-paid" onclick="refreshPayout('${id}',this)">↻ Check payout</button>`;
+  if (!busy) h += `<button class="btn-mark-paid" onclick="wdAction('${id}','completed',this)">✓ Mark as Paid</button><button class="btn-reject" onclick="wdAction('${id}','rejected',this)">✕ Reject</button>`;
+  return h;
+}
+
+async function sendPayout(id, btn) {
+  if (!confirm('Send this payout now from your PayPal account?')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  const d = await apiToast('POST', '/api/admin/withdrawals/' + encodeURIComponent(id) + '/payout');
+  if (d) toast('Payout sent to PayPal — it usually completes within minutes ✓', 'ok');
+  await loadAdminWds();
+}
+
+async function refreshPayout(id, btn) {
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const d = await apiToast('POST', '/api/admin/withdrawals/' + encodeURIComponent(id) + '/payout-refresh');
+  if (d) toast('PayPal says: ' + d.payout_status);
+  await loadAdminWds();
+}
 
-  const { error } = await sb.rpc('admin_update_withdrawal', {
-    p_wd_id:  wdId,
-    p_status: newStatus,
-    p_note:   null
-  });
-
-  if (error) {
-    toast('Failed: ' + error.message, 'er');
-    console.error(error);
+async function wdAction(wdId, newStatus, btn) {
+  let note = null;
+  if (newStatus === 'rejected') {
+    note = prompt('Reason for rejecting (shown to the user):', '');
+    if (note === null) return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const d = await apiToast('POST', '/api/admin/withdrawals/' + encodeURIComponent(wdId), { status: newStatus, note });
+  if (!d) {
     if (btn) { btn.disabled = false; btn.textContent = newStatus === 'approved' ? '✓ Approve' : newStatus === 'rejected' ? '✕ Reject' : '✓ Mark as Paid'; }
     return;
   }
-
-  const labels = { approved: '✓ Approved — will pay within 5–14 business days', rejected: '✕ Request rejected — balance refunded', completed: '✓ Marked as Paid' };
+  const labels = { approved: '✓ Approved — will pay within 5–14 business days', rejected: '✕ Request rejected — balance returned', completed: '✓ Marked as Paid' };
   toast(labels[newStatus] || 'Updated', 'ok');
   await loadAdminWds();
 }
 
+const _adminUsers = {};
 async function loadAdminUsers() {
   const el = g('admin-users'); if (!el) return;
-  const { data: users } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
-  if (!users?.length) { el.innerHTML = '<div class="empty"><div class="empty-ic">👥</div><p>No users yet</p></div>'; return; }
+  const d = await apiToast('GET', '/api/admin/users');
+  if (!d) return;
+  const users = d.users;
+  if (!users.length) { el.innerHTML = '<div class="empty"><div class="empty-ic">👥</div><p>No users yet</p></div>'; return; }
 
   el.innerHTML = `<div style="font-size:.78rem;font-weight:600;color:var(--ink2);margin-bottom:.75rem;">Total: <strong style="color:var(--ink)">${users.length}</strong> users</div>` +
     users.map(u => {
       _adminUsers[u.id] = u;
-      const susp = u.suspended || false;
-      return `<div class="user-row" style="${susp?'opacity:.6':''}">
+      const id = esc(u.id);
+      const susp = u.suspended;
+      return `<div class="user-row" style="${susp ? 'opacity:.6' : ''}">
         <div class="user-row-info">
-          <strong>${esc(u.full_name||'Unknown')} ${susp?'<span style="font-size:.62rem;color:var(--red);font-weight:700">[SUSPENDED]</span>':''}</strong>
-          <span>${esc(u.email||'')} · ${esc(u.business_name||'')} · Joined ${fd(u.created_at)}</span>
-          <span>Balance: <strong style="color:var(--grn)">${fm(u.balance||0)}</strong> · Total Earned: ${fm(u.total_earned||0)} · Ref code: <code style="font-size:.68rem;background:var(--s2);padding:1px 5px;border-radius:3px">${u.ref_code||'—'}</code></span>
+          <strong>${esc(u.full_name || 'Unknown')} ${susp ? '<span style="font-size:.62rem;color:var(--red);font-weight:700">[SUSPENDED]</span>' : ''}${u.is_admin ? ' <span style="font-size:.62rem;color:var(--acc);font-weight:700">[ADMIN]</span>' : ''}</strong>
+          <span>${esc(u.email || '')}${u.email_verified ? '' : ' (unconfirmed)'} · ${esc(u.business_name || '')} · Joined ${fd(u.created_at)}</span>
+          <span>Available: <strong style="color:var(--grn)">${fmMulti(u.balances)}</strong>${Object.keys(u.held || {}).length ? ' · On hold: ' + fmMulti(u.held) : ''} · Hold: ${u.hold_days} days${u.hold_override != null ? ' (custom)' : ''} · Ref code: <code style="font-size:.68rem;background:var(--s2);padding:1px 5px;border-radius:3px">${esc(u.ref_code || '—')}</code></span>
         </div>
         <div class="user-row-actions">
-          <button style="border-color:${susp?'var(--grn)':'var(--gld)'};color:${susp?'var(--grn)':'var(--gld)'}" onclick="adminSuspend('${u.id}',${!susp})">${susp?'✓ Unsuspend':'⊘ Suspend'}</button>
-          <button style="border-color:var(--acc);color:var(--acc)" onclick="adminAdjustBalance('${u.id}')">💰 Adjust Balance</button>
-          <button style="border-color:var(--red);color:var(--red)" onclick="adminDeleteUser('${u.id}')">✕ Delete</button>
+          <button style="border-color:${susp ? 'var(--grn)' : 'var(--gld)'};color:${susp ? 'var(--grn)' : 'var(--gld)'}" onclick="adminSuspend('${id}',${!susp})">${susp ? '✓ Unsuspend' : '⊘ Suspend'}</button>
+          <button style="border-color:var(--acc);color:var(--acc)" onclick="adminAdjustBalance('${id}')">💰 Adjust Balance</button>
+          <button style="border-color:var(--ink3);color:var(--ink2)" onclick="adminSetHold('${id}')">⏳ Hold</button>
+          <button style="border-color:var(--red);color:var(--red)" onclick="adminDeleteUser('${id}')">✕ Delete</button>
         </div>
       </div>`;
     }).join('');
 }
 
+async function adminSetHold(userId) {
+  const u = _adminUsers[userId] || {};
+  const raw = prompt(`Payment hold for ${u.full_name || u.email} (days before new payments can be withdrawn).\nNow: ${u.hold_days} days${u.hold_override != null ? ' (custom)' : ' (default rules)'}\n\nEnter days (0–180), or leave empty for the default rules:`, u.hold_override ?? '');
+  if (raw === null) return;
+  const d = await apiToast('POST', '/api/admin/users/' + encodeURIComponent(userId) + '/hold', { days: raw.trim() === '' ? null : parseInt(raw, 10) });
+  if (!d) return;
+  toast(raw.trim() === '' ? 'Hold reset to default rules' : 'Hold set to ' + parseInt(raw, 10) + ' days', 'ok');
+  await loadAdminUsers();
+}
+
 async function adminSuspend(userId, suspend) {
-  await sb.from('profiles').update({ suspended: suspend }).eq('id', userId);
+  const d = await apiToast('POST', '/api/admin/users/' + encodeURIComponent(userId) + '/suspend', { suspended: suspend });
+  if (!d) return;
   toast(suspend ? 'User suspended' : 'User unsuspended', 'ok');
   await loadAdminUsers();
 }
 
-const _adminUsers = {};
+// Adds or removes an amount (recorded with a reason) instead of overwriting the balance
 async function adminAdjustBalance(userId) {
   const u = _adminUsers[userId] || {};
   const name = u.full_name || u.email || 'this user';
-  const newBal = prompt(`Adjust balance for ${name}\nCurrent: ${fm(u.balance || 0)}\n\nEnter new balance amount:`);
-  if (newBal === null) return;
-  const val = parseFloat(newBal);
-  if (isNaN(val) || val < 0) { toast('Invalid amount', 'er'); return; }
-  await sb.from('profiles').update({ balance: val }).eq('id', userId);
-  toast('Balance updated to ' + fm(val), 'ok');
+  const cur = (prompt(`Adjust balance for ${name}\nCurrent: ${fmMulti(u.balances)}\n\nCurrency (e.g. USD):`, Object.keys(u.balances || {})[0] || 'USD') || '').toUpperCase().trim();
+  if (!cur) return;
+  const raw = prompt(`Amount to ADD in ${cur} (use a minus sign to subtract, e.g. -10):`);
+  if (raw === null) return;
+  const amount = parseFloat(raw);
+  if (!amount) { toast('Invalid amount', 'er'); return; }
+  const note = prompt('Reason (saved in the audit log):');
+  if (!note) { toast('A reason is required', 'er'); return; }
+  const d = await apiToast('POST', '/api/admin/users/' + encodeURIComponent(userId) + '/adjust', { currency: cur, amount, note });
+  if (!d) return;
+  toast('Balance adjusted by ' + fmtAmt(amount, cur), 'ok');
   await loadAdminUsers();
 }
 
 async function adminDeleteUser(userId) {
-  if (!confirm('Delete this user and ALL their data? This cannot be undone.')) return;
-  // Delete all related data
-  // Child rows first, then the profile (deleting them together can hit foreign-key errors)
-  await Promise.all([
-    sb.from('vy_collections').delete().eq('user_id', userId),
-    sb.from('vy_subscriptions').delete().eq('user_id', userId),
-    sb.from('vy_pay_links').delete().eq('user_id', userId),
-    sb.from('vy_transactions').delete().eq('user_id', userId),
-    sb.from('vy_withdrawals').delete().eq('user_id', userId),
-    sb.from('vy_follows').delete().eq('follower_id', userId),
-    sb.from('vy_follows').delete().eq('following_id', userId),
-  ]);
-  await sb.from('profiles').delete().eq('id', userId);
-  toast('User deleted', 'ok');
+  if (!confirm('Close this account? Their links stop working and their personal details are removed. Payment records are kept for accounting. This cannot be undone.')) return;
+  const d = await apiToast('DELETE', '/api/admin/users/' + encodeURIComponent(userId));
+  if (!d) return;
+  toast('Account closed', 'ok');
   await loadAdminUsers();
 }
 
 async function loadAdminTxns() {
   const tb = g('adm-txn-tbl'); if (!tb) return;
-  const { data: txns } = await sb.from('vy_transactions').select('*').order('created_at', { ascending: false }).limit(200);
-  const { data: profiles } = await sb.from('profiles').select('id,full_name,email');
-  const profMap = {};
-  (profiles||[]).forEach(p => profMap[p.id] = p);
-
-  if (!txns?.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--ink3)">No transactions</td></tr>'; return; }
-  tb.innerHTML = txns.map(t => {
-    const u = profMap[t.user_id];
-    return `<tr>
+  const d = await apiToast('GET', '/api/admin/transactions');
+  if (!d) return;
+  const txns = d.transactions;
+  if (!txns.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--ink3)">No transactions</td></tr>'; return; }
+  tb.innerHTML = txns.map(t => `<tr>
       <td>${fd(t.created_at)}</td>
-      <td style="font-size:.72rem">${esc(u?.full_name||u?.email||'?')}</td>
-      <td>${esc(t.description||'')}</td>
-      <td>${fm(t.gross_amount||0)}</td>
-      <td style="color:var(--red)">${fm(t.fee_amount||0)}</td>
-      <td style="color:var(--grn)">${fm(t.net_amount||0)}</td>
-      <td><span class="pill pb">${t.payment_method||'PayPal'}</span></td>
-    </tr>`;
-  }).join('');
+      <td style="font-size:.72rem">${esc(t.user || '?')}</td>
+      <td>${esc(t.description || '')}${t.status !== 'succeeded' ? ' <span class="pill pr">' + esc(t.status.replace('_', ' ')) + '</span>' : ''}</td>
+      <td>${fmtAmt(t.gross_amount, t.currency)}</td>
+      <td style="color:var(--red)">${fmtAmt(t.fee_amount, t.currency)}</td>
+      <td style="color:var(--grn)">${fmtAmt(t.net_amount, t.currency)}</td>
+      <td><span class="pill pb">${esc(t.payment_method)}</span></td>
+    </tr>`).join('');
 }
 
 async function loadAdminStats() {
   const el = g('adm-stats'); if (!el) return;
-  const { data: txns } = await sb.from('vy_transactions').select('gross_amount,net_amount,fee_amount,created_at').eq('status', 'succeeded');
-  const { data: wds } = await sb.from('vy_withdrawals').select('amount,status');
-  const { data: users } = await sb.from('profiles').select('id,referrer_id,api_key');
-  const { data: cols } = await sb.from('vy_collections').select('id');
-  const { data: subs } = await sb.from('vy_subscriptions').select('id');
-  const { data: lnks } = await sb.from('vy_pay_links').select('id');
-
-  const t = txns || [];
-  const totalGross = t.reduce((a,x) => a+(x.gross_amount||0), 0);
-  const totalFees  = t.reduce((a,x) => a+(x.fee_amount||0), 0);
-  const totalNet   = t.reduce((a,x) => a+(x.net_amount||0), 0);
-  const now = new Date(), ms = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const monthFees  = t.filter(x => x.created_at >= ms).reduce((a,x) => a+(x.fee_amount||0), 0);
-  const pendingWds = (wds||[]).filter(w => w.status==='pending').reduce((a,w) => a+(w.amount||0), 0);
-  const doneWds    = (wds||[]).filter(w => w.status==='completed').reduce((a,w) => a+(w.amount||0), 0);
-
-  // Top earners
-  const { data: topEarners } = await sb.from('profiles')
-    .select('full_name,business_name,email,total_earned,balance')
-    .order('total_earned', { ascending: false }).limit(5);
-
-  // Monthly breakdown (last 6 months)
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-    const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
-    const end = new Date(d.getFullYear(), d.getMonth()+1, 1).toISOString();
-    const mFees = t.filter(x => new Date(x.created_at) >= new Date(start) && new Date(x.created_at) < new Date(end)).reduce((a,x) => a+(x.fee_amount||0), 0);
-    months.push({ label, fees: mFees });
-  }
-  const maxFee = Math.max(...months.map(m => m.fees), 1);
-
-  const refUsers = (users||[]).filter(u => u.referrer_id).length;
-  const apiUsers = (users||[]).filter(u => u.api_key).length;
+  const s = await apiToast('GET', '/api/admin/stats');
+  if (!s) return;
+  const now = new Date();
+  const monthKey = d => d.toISOString().slice(0, 7);
+  const thisMonth = {};
+  s.monthly_fees.filter(m => m.month === monthKey(now)).forEach(m => { thisMonth[m.currency] = m.fees; });
+  const sc = (label, val, cls, style) => '<div class="sc"><div class="scl">' + label + '</div><div class="scv ' + (cls || '') + '"' + (style ? ' style="' + style + '"' : '') + '>' + val + '</div></div>';
 
   el.innerHTML =
-    '<div class="sc"><div class="scl">Total Volume</div><div class="scv bl">'+fm(totalGross)+'</div></div>' +
-    '<div class="sc"><div class="scl">Platform Revenue</div><div class="scv gr">'+fm(totalFees)+'</div></div>' +
-    '<div class="sc"><div class="scl">This Month Revenue</div><div class="scv go">'+fm(monthFees)+'</div></div>' +
-    '<div class="sc"><div class="scl">Avg Transaction</div><div class="scv bl">'+fm(t.length ? totalGross/t.length : 0)+'</div></div>' +
-    '<div class="sc"><div class="scl">Pending Payouts</div><div class="scv rd">'+fm(pendingWds)+'</div></div>' +
-    '<div class="sc"><div class="scl">Paid Out Total</div><div class="scv pu">'+fm(doneWds)+'</div></div>' +
-    '<div class="sc"><div class="scl">Total Users</div><div class="scv">'+(users||[]).length+'</div></div>' +
-    '<div class="sc"><div class="scl">Active (paid)</div><div class="scv gr">'+[...new Set(t.map(x=>x.user_id))].length+'</div></div>' +
-    '<div class="sc"><div class="scl">Referred Users</div><div class="scv" style="color:var(--gld)">'+refUsers+'</div></div>' +
-    '<div class="sc"><div class="scl">API Users</div><div class="scv" style="color:var(--acc)">'+apiUsers+'</div></div>' +
-    '<div class="sc"><div class="scl">Total Transactions</div><div class="scv">'+t.length+'</div></div>' +
-    '<div class="sc"><div class="scl">Referral Commissions</div><div class="scv" style="color:var(--gld)">'+fm(t.reduce((a,x)=>a+(x.referral_amount||0),0))+'</div></div>';
+    sc('Total Volume', fmMulti(s.volume), 'bl') +
+    sc('Platform Revenue', fmMulti(s.fees), 'gr') +
+    sc('This Month Revenue', fmMulti(thisMonth), 'go') +
+    sc('Pending Payouts', fmMulti(s.pending_payouts), 'rd') +
+    sc('Approved (to pay)', fmMulti(s.approved_payouts), 'pu') +
+    sc('Paid Out Total', fmMulti(s.paid_out), 'pu') +
+    sc('Total Users', s.users) +
+    sc('Active Sellers', s.active_sellers, 'gr') +
+    sc('Referred Users', s.referred_users, '', 'color:var(--gld)') +
+    sc('API Users', s.api_users, '', 'color:var(--acc)') +
+    sc('Total Transactions', s.txn_count) +
+    sc('Referral Commissions', fmMulti(s.referral_paid), '', 'color:var(--gld)');
 
-  // Monthly revenue chart — build without template literals
-  var chartDiv = document.createElement('div');
+  // Monthly platform fees, last 6 months (bar height uses the sum across currencies)
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const key = monthKey(d);
+    const per = {};
+    s.monthly_fees.filter(m => m.month === key).forEach(m => { per[m.currency] = m.fees; });
+    months.push({ label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' }), per, total: Object.values(per).reduce((a, b) => a + b, 0) });
+  }
+  const maxFee = Math.max(...months.map(m => m.total), 1);
+  const chartDiv = document.createElement('div');
   chartDiv.style.cssText = 'margin-top:1.2rem';
-  var chartLabel = '<div style="font-size:.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.8rem;display:flex;align-items:center;gap:8px"><span style="width:14px;height:2px;background:var(--gld);display:block;border-radius:2px"></span>Monthly Platform Fees</div>';
-  var bars = months.map(function(m) {
-    var h = Math.max(4, Math.round((m.fees / maxFee) * 60));
-    var bg = m.fees > 0 ? 'var(--acc)' : 'var(--bord)';
-    var label = m.fees > 0 ? fm(m.fees) : '';
-    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">' +
-      '<div style="font-size:.6rem;color:var(--ink3)">' + label + '</div>' +
-      '<div style="width:100%;background:' + bg + ';border-radius:4px 4px 0 0;height:' + h + 'px"></div>' +
+  const chartLabel = '<div style="font-size:.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.8rem;display:flex;align-items:center;gap:8px"><span style="width:14px;height:2px;background:var(--gld);display:block;border-radius:2px"></span>Monthly Platform Fees</div>';
+  const bars = months.map(m => {
+    const h = Math.max(4, Math.round((m.total / maxFee) * 60));
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">' +
+      '<div style="font-size:.6rem;color:var(--ink3);text-align:center">' + (m.total > 0 ? fmMulti(m.per) : '') + '</div>' +
+      '<div style="width:100%;background:' + (m.total > 0 ? 'var(--acc)' : 'var(--bord)') + ';border-radius:4px 4px 0 0;height:' + h + 'px"></div>' +
       '<div style="font-size:.6rem;color:var(--ink3)">' + m.label + '</div></div>';
   }).join('');
-  chartDiv.innerHTML = chartLabel + '<div style="display:flex;align-items:flex-end;gap:6px;height:80px">' + bars + '</div>';
+  chartDiv.innerHTML = chartLabel + '<div style="display:flex;align-items:flex-end;gap:6px;height:90px">' + bars + '</div>';
 
-  // Top earners table
-  var earnersDiv = document.createElement('div');
+  const earnersDiv = document.createElement('div');
   earnersDiv.style.cssText = 'margin-top:1.2rem';
-  var earnersLabel = '<div style="font-size:.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;display:flex;align-items:center;gap:8px"><span style="width:14px;height:2px;background:var(--gld);display:block;border-radius:2px"></span>Top Earners</div>';
-  var rows = (topEarners || []).map(function(u, i) {
-    return '<tr>' +
-      '<td style="padding:.4rem .6rem;border-bottom:1px solid var(--bord)"><span style="font-size:.65rem;background:var(--al);color:var(--acc);padding:1px 5px;border-radius:4px;margin-right:4px">#' + (i+1) + '</span>' + esc(u.business_name || u.full_name || u.email) + '</td>' +
-      '<td style="padding:.4rem .6rem;border-bottom:1px solid var(--bord);text-align:right;color:var(--grn);font-weight:600">' + fm(u.total_earned || 0) + '</td>' +
-      '<td style="padding:.4rem .6rem;border-bottom:1px solid var(--bord);text-align:right">' + fm(u.balance || 0) + '</td>' +
-      '</tr>';
-  }).join('');
-  earnersDiv.innerHTML = earnersLabel + '<div style="overflow-x:auto"><table style="width:100%;font-size:.75rem;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:.4rem .6rem;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--bord)">User</th><th style="text-align:right;padding:.4rem .6rem;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--bord)">Earned</th><th style="text-align:right;padding:.4rem .6rem;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--bord)">Balance</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  const th = 'padding:.4rem .6rem;color:var(--ink3);font-weight:600;border-bottom:1px solid var(--bord)';
+  const td = 'padding:.4rem .6rem;border-bottom:1px solid var(--bord)';
+  const rows = s.top_earners.map((u, i) => '<tr>' +
+    '<td style="' + td + '"><span style="font-size:.65rem;background:var(--al);color:var(--acc);padding:1px 5px;border-radius:4px;margin-right:4px">#' + (i + 1) + '</span>' + esc(u.name) + '</td>' +
+    '<td style="' + td + ';text-align:right;color:var(--grn);font-weight:600">' + fmtAmt(u.earned, u.currency) + '</td></tr>').join('');
+  earnersDiv.innerHTML = '<div style="font-size:.72rem;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;display:flex;align-items:center;gap:8px"><span style="width:14px;height:2px;background:var(--gld);display:block;border-radius:2px"></span>Top Earners</div>' +
+    '<div style="overflow-x:auto"><table style="width:100%;font-size:.75rem;border-collapse:collapse"><thead><tr><th style="text-align:left;' + th + '">User</th><th style="text-align:right;' + th + '">Earned (net)</th></tr></thead><tbody>' +
+    (rows || '<tr><td colspan="2" style="' + td + ';color:var(--ink3)">No sales yet</td></tr>') + '</tbody></table></div>';
 
   const extra = g('adm-extra');
   if (extra) { extra.innerHTML = ''; extra.appendChild(chartDiv); extra.appendChild(earnersDiv); }
@@ -2888,6 +2985,10 @@ function spAdminM(pid, bid) {
 // Debounce timer so we don't reload PayPal on every keystroke
 let _previewTimer = null;
 
+// Item saved from a create form when a payment is taken in its preview, keyed by type, with a
+// signature so changing the name/amount/currency saves a fresh item.
+const _previewSaved = {};
+
 function _showPreview(boxId, containerId, titleId, nameVal, amtVal, curVal, sourceType) {
   const box = document.getElementById(boxId);
   if (!box) return;
@@ -2904,53 +3005,51 @@ function _showPreview(boxId, containerId, titleId, nameVal, amtVal, curVal, sour
   if (titleEl) titleEl.textContent = 'Collect ' + fmtAmt(amt, cur);
 
   const item = {
-    id: '_preview_' + sourceType, name: nameVal, amount: amt, currency: cur, type: sourceType,
-    business: currentProfile?.business_name || currentProfile?.full_name || ''
+    id: null, name: nameVal, amount: amt, currency: cur, type: sourceType,
+    business: currentProfile?.business_name || currentProfile?.full_name || '',
   };
+  // Payments need a saved item: save it the first time someone actually pays from the preview
+  item.ensureId = () => ensurePreviewItem(sourceType, item);
 
   // Keep the card field (and whatever is typed in it) — just update what it will charge.
   const scId = { col: 'nc-sc', sub: 'ns-sc', lnk: 'nl-sc' }[sourceType];
   const cardLive = _SE[scId] && document.getElementById(scId)?.querySelector('iframe');
-  if (cardLive) _SE[scId].item = Object.assign({}, item);
+  if (cardLive) _SE[scId].item = item;
 
   // Debounce the PayPal render so it only fires 600ms after the user stops typing
   clearTimeout(_previewTimer);
   _previewTimer = setTimeout(function() {
     if (!document.getElementById(containerId)) return;
-    if (!cardLive) scInit(scId, item);
-    renderPPButtons(containerId, item, async function(details) {
-      // Payment captured: save the item (if possible), then record the transaction against it.
-      const saved = (await savePreviewItem(item)) || Object.assign({}, item, { id: null });
-      const txn = await recordPayment(saved, 'PayPal', details);
-      await afterPreviewPaid(saved, 'PayPal', txn);
-    });
+    if (!cardLive) { scInit(scId, item); if (_SE[scId]) _SE[scId].item = item; }
+    renderPPButtons(containerId, item, receipt => afterPreviewPaid(sourceType, receipt));
   }, 600);
 }
 
-// Saves the collection / plan / link from the create form for a payment taken in its preview.
-async function savePreviewItem(item) {
-  if (!currentUser) { toast('Please log in to accept payments', 'er'); return null; }
-  const base = { user_id: currentUser.id, name: item.name, amount: item.amount, currency: item.currency };
-  let row = null;
-  if (item.type === 'col') {
-    row = await sbInsert('vy_collections', Object.assign(base, { description: gi('nc-d') }));
-  } else if (item.type === 'sub') {
-    row = await sbInsert('vy_subscriptions', Object.assign(base, { description: gi('ns-d'), cycle: gi('ns-cy') || 'MONTHLY' }));
-  } else if (item.type === 'lnk') {
-    const d = parseInt(gi('nl-e') || '0');
-    row = await sbInsert('vy_pay_links', Object.assign(base, { note: gi('nl-no'), expires_at: d ? new Date(Date.now() + d * 86400000).toISOString() : null }));
-  }
-  return row ? Object.assign({}, item, { id: row.id }) : null;
+async function ensurePreviewItem(type, item) {
+  const sig = [item.name, item.amount, item.currency].join('|');
+  if (_previewSaved[type] && _previewSaved[type].sig === sig) return _previewSaved[type].id;
+  const body = { type, name: item.name, amount: item.amount, currency: item.currency };
+  if (type === 'col') body.description = gi('nc-d');
+  if (type === 'sub') { body.description = gi('ns-d'); body.cycle = gi('ns-cy') || 'MONTHLY'; }
+  if (type === 'lnk') { body.note = gi('nl-no'); body.expires_days = parseInt(gi('nl-e') || '0', 10); }
+  const d = await api('POST', '/api/items', body);
+  _previewSaved[type] = { sig, id: d.item.id };
+  return d.item.id;
 }
 
-async function afterPreviewPaid(saved, method, txn) {
-  toast('Payment of ' + fmtAmt(saved.amount, saved.currency) + ' received ✓', 'ok');
-  showReceipt(saved, method, txn?.id);
+async function afterPreviewPaid(type, receipt) {
+  toast('Payment of ' + fmtAmt(receipt.amount, receipt.currency) + ' received ✓', 'ok');
+  showReceipt(receipt);
+  delete _previewSaved[type];
+  const pre = { col: 'nc', sub: 'ns', lnk: 'nl' }[type];
+  [pre + '-n', pre + '-a', pre + '-d', pre + '-no'].forEach(id => { if (g(id)) g(id).value = ''; });
+  if (g(pre + '-pay-box')) g(pre + '-pay-box').style.display = 'none';
   await loadUserData();
-  quickNav({ col: 'p-cols', sub: 'p-subs', lnk: 'p-lnks' }[saved.type]);
+  quickNav({ col: 'p-cols', sub: 'p-subs', lnk: 'p-lnks' }[type]);
 }
 
 function ncPreview() {
+  feeNote('nc');
   _showPreview('nc-pay-box', 'nc-pp-container', 'nc-pay-title',
     (document.getElementById('nc-n') || {}).value || '',
     (document.getElementById('nc-a') || {}).value || '',
@@ -2958,7 +3057,10 @@ function ncPreview() {
     'col');
 }
 
-function nsPreview() {
+// Subscriptions are paid from their public link (the first charge starts the recurring billing),
+// so the create form only shows the fee note.
+function nsPreview() { feeNote('ns'); }
+function _nsPreviewUnused() {
   _showPreview('ns-pay-box', 'ns-pp-container', 'ns-pay-title',
     (document.getElementById('ns-n') || {}).value || '',
     (document.getElementById('ns-a') || {}).value || '',
@@ -2967,6 +3069,7 @@ function nsPreview() {
 }
 
 function nlPreview() {
+  feeNote('nl');
   _showPreview('nl-pay-box', 'nl-pp-container', 'nl-pay-title',
     (document.getElementById('nl-n') || {}).value || '',
     (document.getElementById('nl-a') || {}).value || '',
@@ -2999,7 +3102,6 @@ function copyText(text) {
 }
 function empt(ic, msg) { return `<div class="empty" style="grid-column:1/-1"><div class="empty-ic">${ic}</div><p>${msg}</p></div>`; }
 function coUrl(type, id) { return location.origin + location.pathname + '?pay=' + type + ':' + id; }
-function genRefCode() { return Math.random().toString(36).slice(2,8).toUpperCase(); }
 function updateFlag(selId, flagId) { const cur = g(selId)?.value; const el = g(flagId); if (el) el.textContent = CF(cur); }
 function showErr(id, msg) { const el = g(id); if (!el) return; el.textContent = msg; el.classList.remove('hidden'); }
 function hideErr(id) { const el = g(id); if (!el) return; el.classList.add('hidden'); }
@@ -3020,18 +3122,43 @@ function toast(msg, cls = '') {
 }
 
 // ═══════════════════════════════════════════════
-// BOOT — Supabase session restore
+// BOOT — restore the session from the Worker
 // ═══════════════════════════════════════════════
 async function boot() {
   const params = new URLSearchParams(location.search);
   const hideLoader = () => { g('loading-screen').style.display = 'none'; };
+  const cleanUrl = () => history.replaceState(null, '', location.pathname);
 
-  // Restore the session first so every route (checkout, profile, referral) knows who is logged in.
-  const { data: { session } } = await sb.auth.getSession();
+  await loadConfig();
+  let me = null;
+  try { me = (await api('GET', '/api/me')).user; } catch (e) {}
 
-  // Password reset link → new-password form (Supabase reads the token from the URL)
-  if (params.get('reset') === '1') {
-    hideLoader(); showView('new-password'); listenAuth(); return;
+  // Password reset link (?reset=<token>) → new-password form. The token is removed from the address bar.
+  const reset = params.get('reset');
+  if (reset) {
+    _resetToken = reset;
+    cleanUrl();
+    hideLoader(); showView('new-password'); return;
+  }
+
+  // Back from the email confirmation link or a failed Google sign-in
+  if (params.has('verified')) {
+    const ok = params.get('verified') === '1';
+    setTimeout(() => toast(ok ? 'Email confirmed ✓' : 'That confirmation link is invalid or has expired.', ok ? 'ok' : 'er'), 400);
+    cleanUrl();
+  }
+  if (params.has('login_error')) {
+    const known = ['Google sign-in expired. Please try again.', 'Google sign-in failed. Please try again.', 'Your Google email is not verified.', 'This account is suspended. Contact support.'];
+    const msg = known.includes(params.get('login_error')) ? params.get('login_error') : 'Google sign-in failed. Please try again.';
+    setTimeout(() => toast(msg, 'er'), 400);
+    cleanUrl();
+  }
+
+  // Cancel link from a subscription receipt
+  const cancelTok = params.get('cancel_sub');
+  if (cancelTok) {
+    cleanUrl();
+    hideLoader(); await initCancelSub(cancelTok); return;
   }
 
   // Public checkout link
@@ -3039,53 +3166,39 @@ async function boot() {
   if (pay) {
     const [type, id] = pay.split(':');
     if (type && id) {
-      if (session?.user) await afterLogin(session.user, { quiet: true });
-      hideLoader(); await initCheckout(type, id); listenAuth(); return;
+      if (me) await afterLogin(me, { quiet: true });
+      hideLoader(); await initCheckout(type, id); return;
     }
   }
 
   // Public profile page
   const uCode = params.get('u');
   if (uCode) {
-    if (session?.user) await afterLogin(session.user, { quiet: true });
-    hideLoader(); await initProfile(uCode); listenAuth(); return;
+    if (me) await afterLogin(me, { quiet: true });
+    hideLoader(); await initProfile(uCode); return;
   }
 
   // Referral link: only meaningful for people who don't have an account yet
   const ref = params.get('ref');
-  if (ref && !session?.user) {
-    localStorage.setItem('vy_pending_ref', ref.toUpperCase());
-    const inp = g('su-r'); if (inp) inp.value = ref.toUpperCase();
+  if (ref && !me) {
+    const code = ref.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    localStorage.setItem('vy_pending_ref', code);
+    const inp = g('su-r'); if (inp) inp.value = code;
     const note = g('ref-note'); if (note) note.classList.remove('hidden');
-    hideLoader(); showView('signup'); updateNav(); listenAuth(); return;
+    hideLoader(); showView('signup'); updateNav(); return;
   }
 
   hideLoader();
-  if (session?.user) {
-    await afterLogin(session.user);
+  if (me) {
+    await afterLogin(me);
   } else {
     updateNav();
     showView('landing');
   }
-  listenAuth();
 }
-// Start only after every <script> block on the page has been parsed — functions like initProfile,
-// scInit and loadApiKey live in later blocks and were sometimes undefined when boot ran.
+// Start only after every <script> block on the page has been parsed
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();
-
-// Handles sign-ins that don't go through doLogin/doSignup (e.g. returning from Google) and sign-outs.
-function listenAuth() {
-  sb.auth.onAuthStateChange((event, session) => {
-    // Supabase recommends not awaiting its own calls inside this callback, so defer the work.
-    if (event === 'SIGNED_IN' && session?.user && !currentUser) {
-      setTimeout(() => { if (!currentUser) afterLogin(session.user, { welcome: true }); }, 0);
-    } else if (event === 'SIGNED_OUT') {
-      currentUser = null; currentProfile = null; isAdmin = false;
-      updateNav(); showView('landing');
-    }
-  });
-}
 </script>
 
 
@@ -3114,7 +3227,7 @@ function listenAuth() {
     </ul>
 
     <h2>3. Sharing Your Information</h2>
-    <p>We do not sell your personal data. We share information only with trusted service providers — PayPal for payment processing and Supabase for secure data storage — under strict confidentiality agreements. We may also disclose information when required by law or to protect the rights and safety of our users.</p>
+    <p>We do not sell your personal data. We share information only with trusted service providers — PayPal and Stripe for payment processing and Cloudflare for hosting and secure data storage — under strict confidentiality agreements. We may also disclose information when required by law or to protect the rights and safety of our users.</p>
 
     <h2>4. Payment Data</h2>
     <p>All payment processing is handled by PayPal. VyCheckout does not store card numbers or full payment credentials. PayPal's own privacy policy governs all data collected at the point of payment. You can review it at <strong>paypal.com/privacy</strong>.</p>
@@ -3180,7 +3293,7 @@ function listenAuth() {
     <p>VyCheckout may only be used for lawful purposes and in accordance with these terms. You agree not to use the platform to process payments for illegal goods or services, to commit fraud, to launder money, to send spam, or to violate any applicable local, national, or international law or regulation.</p>
 
     <h2>5. Payments & Fees</h2>
-    <p>Payment processing is provided via PayPal and is subject to PayPal's terms, conditions, and fees. A platform fee of 24% applies to each transaction processed through VyCheckout. This fee is deducted automatically from the gross payment amount before crediting your balance. Withdrawal minimums and processing times apply as displayed in the platform.</p>
+    <p>Payment processing is provided via PayPal and is subject to PayPal's terms, conditions, and fees. A platform fee of <span class="fee-pct">19%</span> applies to each transaction processed through VyCheckout. This fee is deducted automatically from the gross payment amount before crediting your balance. Withdrawal minimums and processing times apply as displayed in the platform.</p>
 
     <h2>6. Referral Programme</h2>
     <p>VyCheckout operates a referral programme that pays a 1% commission on the gross value of payments collected by users you refer. Commissions are credited to your VyCheckout balance automatically. VyCheckout reserves the right to modify, suspend, or discontinue the referral programme at any time with reasonable notice. Abuse of the referral system — including creating fake accounts or self-referrals — will result in immediate account suspension and forfeiture of all commissions.</p>
@@ -3279,7 +3392,7 @@ document.addEventListener('keydown', e => {
     <div class="ig-bio">
       <div class="ig-bio-name" id="ig-bio-name">—</div>
       <div class="ig-bio-text" id="ig-bio-text"></div>
-      <div class="ig-bio-badge">✓ VyCheckout Verified</div>
+      
     </div>
 
     <!-- Actions -->
@@ -3329,24 +3442,19 @@ async function initProfile(refCode) {
   showView('profile');
   _igProfileId = null;
 
-  const { data: prof } = await sb.from('profiles')
-    .select('id,full_name,business_name,avatar,bio,ref_code')
-    .eq('ref_code', refCode.toUpperCase())
-    .single();
-
-  if (!prof) {
+  let d;
+  try { d = await api('GET', '/api/public/profiles/' + encodeURIComponent(refCode)); }
+  catch (e) {
     const grid = document.getElementById('ig-grid');
     if (grid) grid.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--ink3)">Profile not found.</div>';
     return;
   }
-
+  const prof = d.profile;
   _igProfileId = prof.id;
   window._currentProfileCode = prof.ref_code; // Share button shares THIS profile, not the viewer's
 
-  // Set profile info
-  const av = prof.avatar || '👤';
   const biz = prof.business_name || prof.full_name || 'VyCheckout User';
-  document.getElementById('ig-av').textContent = av;
+  document.getElementById('ig-av').textContent = prof.avatar || '👤';
   document.getElementById('ig-bio-name').textContent = biz;
   document.getElementById('ig-topbar-name').textContent = biz;
   const bioEl = document.getElementById('ig-bio-text');
@@ -3354,57 +3462,35 @@ async function initProfile(refCode) {
   const rl = document.getElementById('ig-ref-link');
   if (rl) rl.href = location.pathname + '?ref=' + encodeURIComponent(prof.ref_code);
 
-  // Load counts in parallel
-  const [colsRes, lnksRes, followersRes, followingRes] = await Promise.all([
-    sb.from('vy_collections').select('*').eq('user_id', prof.id),
-    sb.from('vy_pay_links').select('*').eq('user_id', prof.id),
-    sb.from('vy_follows').select('*', { count: 'exact', head: true }).eq('following_id', prof.id),
-    sb.from('vy_follows').select('*', { count: 'exact', head: true }).eq('follower_id', prof.id),
-  ]);
-
-  const items = [
-    ...(colsRes.data || []).map(function(c){ c._type='col'; return c; }),
-    ...(lnksRes.data || []).filter(function(l){ return !l.expires_at || new Date(l.expires_at) > new Date(); }).map(function(l){ l._type='lnk'; return l; })
-  ];
-
+  const items = d.items;
   document.getElementById('ig-posts').textContent = items.length;
-  document.getElementById('ig-followers').textContent = followersRes.count || 0;
-  document.getElementById('ig-following').textContent = followingRes.count || 0;
+  document.getElementById('ig-followers').textContent = d.followers;
+  document.getElementById('ig-following').textContent = d.following;
 
-  // Follow button state
   const actionsEl = document.getElementById('ig-actions');
   const followBtn = document.getElementById('ig-follow-btn');
-
-  if (currentUser && currentUser.id === prof.id) {
-    // Own profile — show Edit button
+  if (d.is_me) {
     actionsEl.innerHTML =
       '<button class="ig-follow-btn" onclick="openEditProfile()" style="background:var(--surf);color:var(--ink1);border-color:var(--bord)">✏️ Edit Profile</button>' +
       '<button class="ig-msg-btn" onclick="shareProfileUrl()">Share</button>';
   } else if (currentUser) {
-    // Another user's profile — check follow state
-    const { data: existingFollow } = await sb.from('vy_follows')
-      .select('id').eq('follower_id', currentUser.id).eq('following_id', prof.id).single();
-    const isFollowing = !!existingFollow;
-    followBtn.textContent = isFollowing ? 'Following' : 'Follow';
-    followBtn.className = isFollowing ? 'ig-follow-btn following' : 'ig-follow-btn';
+    followBtn.textContent = d.is_following ? 'Following' : 'Follow';
+    followBtn.className = d.is_following ? 'ig-follow-btn following' : 'ig-follow-btn';
   } else {
-    // Not logged in
     followBtn.textContent = 'Follow';
     followBtn.className = 'ig-follow-btn';
     followBtn.onclick = function() { showView('signup'); };
   }
 
-  // Render payment link grid
   const grid = document.getElementById('ig-grid');
   grid.innerHTML = '';
   if (items.length === 0) {
     grid.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:var(--ink3);grid-column:1/-1">No payment links yet.</div>';
     return;
   }
-
   items.forEach(function(item) {
-    const url = coUrl(item._type, item.id);
-    const isCol = item._type === 'col';
+    const url = coUrl(item.type, item.id);
+    const isCol = item.type === 'col';
     const sub = item.description || item.note || '';
     const card = document.createElement('div');
     card.className = 'ig-card';
@@ -3433,19 +3519,12 @@ async function igToggleFollow() {
   const fcEl = document.getElementById('ig-followers');
   const count = parseInt(fcEl?.textContent || '0');
 
-  if (isFollowing) {
-    await sb.from('vy_follows').delete()
-      .eq('follower_id', currentUser.id).eq('following_id', _igProfileId);
-    btn.textContent = 'Follow';
-    btn.className = 'ig-follow-btn';
-    if (fcEl) fcEl.textContent = Math.max(0, count - 1);
-    toast('Unfollowed', 'ok');
-  } else {
-    await sb.from('vy_follows').insert({ follower_id: currentUser.id, following_id: _igProfileId });
-    btn.textContent = 'Following';
-    btn.className = 'ig-follow-btn following';
-    if (fcEl) fcEl.textContent = count + 1;
-    toast('Following! ✓', 'ok');
+  const d = await apiToast(isFollowing ? 'DELETE' : 'POST', '/api/follows/' + encodeURIComponent(_igProfileId));
+  if (d) {
+    btn.textContent = isFollowing ? 'Follow' : 'Following';
+    btn.className = isFollowing ? 'ig-follow-btn' : 'ig-follow-btn following';
+    if (fcEl) fcEl.textContent = isFollowing ? Math.max(0, count - 1) : count + 1;
+    toast(isFollowing ? 'Unfollowed' : 'Following! ✓', 'ok');
   }
 
   btn.disabled = false;
@@ -3508,15 +3587,11 @@ async function saveProfile() {
   const btn = document.getElementById('ep-save-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
-  const { error } = await sb.from('profiles').update({
-    business_name: biz || currentProfile.business_name,
-    bio: bio || null,
-    avatar: avatar
-  }).eq('id', currentUser.id);
+  const ok = await apiToast('PATCH', '/api/me', { business_name: biz || currentProfile.business_name, bio: bio || null, avatar });
 
   if (btn) { btn.disabled = false; btn.textContent = 'Save Profile'; }
 
-  if (!error) {
+  if (ok) {
     currentProfile = Object.assign({}, currentProfile, { business_name: biz, bio: bio, avatar: avatar });
     if (document.getElementById('pc-avatar')) document.getElementById('pc-avatar').textContent = avatar;
     if (document.getElementById('pc-biz')) document.getElementById('pc-biz').textContent = biz || currentProfile.business_name;
@@ -3524,8 +3599,6 @@ async function saveProfile() {
     closeEditProfile();
     toast('Profile updated! ✓', 'ok');
     await loadUserData();
-  } else {
-    toast('Failed: ' + error.message, 'er');
   }
 }
 
@@ -3539,7 +3612,7 @@ let _SI = null;           // Stripe instance
 const _SE = {};           // card elements keyed by container id
 
 function _stripe() {
-  if (!_SI && window.Stripe) _SI = Stripe(STRIPE_PK);
+  if (!_SI && window.Stripe && CFG.stripe_publishable_key) _SI = Stripe(CFG.stripe_publishable_key);
   return _SI;
 }
 
@@ -3573,62 +3646,38 @@ function scInit(id, item) {
 
 async function scPay(id) {
   const sd = _SE[id];
-  if (!sd) { toast('Card not ready — please wait', 'er'); return; }
+  if (!sd) { toast('Card payments are not available right now', 'er'); return; }
   const btn = document.getElementById(id + '-btn');
   const err = document.getElementById(id + '-err');
   if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
   if (err) err.textContent = '';
 
   try {
-    // 1. Create PaymentMethod from card element
-    const { paymentMethod, error: pmErr } = await sd.stripe.createPaymentMethod({ type: 'card', card: sd.card });
-    if (pmErr) throw new Error(pmErr.message);
-
-    // 2. Call stripe-setup Edge Function to create PaymentIntent
-    const res = await fetch(STRIPE_FN, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'create_payment_intent',
-        // Stripe wants the smallest currency unit: cents for USD, but whole yen for JPY
-        amount: isZD(sd.item.currency) ? Math.round(+sd.item.amount) : Math.round(+sd.item.amount * 100),
-        currency: (sd.item.currency || 'USD').toLowerCase(),
-        description: sd.item.name || 'VyCheckout payment'
-      })
+    const item = sd.item;
+    // 1. The Worker creates the PaymentIntent at the item's saved price
+    const itemId = item.ensureId ? await item.ensureId() : item.id;
+    const intent = await api('POST', '/api/pay/stripe/intent', {
+      item_id: itemId,
+      amount: (item.custom || item.custom_amount) ? item.amount : undefined,
     });
 
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error('Payment service error: ' + txt.substring(0,120));
+    // 2. Stripe.js confirms the card (handles 3-D Secure)
+    const { paymentIntent, error } = await sd.stripe.confirmCardPayment(intent.client_secret, { payment_method: { card: sd.card } });
+    if (error) throw new Error(error.message);
+    if (!paymentIntent || paymentIntent.status !== 'succeeded') throw new Error('The card payment did not complete.');
+
+    // 3. The Worker checks the payment with Stripe and records it
+    const d = await api('POST', '/api/pay/stripe/confirm', { intent_id: paymentIntent.id });
+    try { sd.card.clear(); } catch (e) {}
+    if (item.ensureId) {
+      await afterPreviewPaid(item.type, d.receipt);
+    } else {
+      if (g('pay-ovl')?.classList.contains('open')) closePay();
+      toast('Payment of ' + fmtAmt(d.receipt.amount, d.receipt.currency) + ' received ✓', 'ok');
+      showReceipt(d.receipt);
+      setTimeout(function() { loadUserData(); }, 300);
     }
-
-    const fnData = await res.json();
-    if (fnData.error) throw new Error(fnData.error);
-    if (!fnData.client_secret) throw new Error('No client_secret returned');
-
-    // 3. Confirm payment in browser
-    const { paymentIntent, error: confErr } = await sd.stripe.confirmCardPayment(fnData.client_secret, {
-      payment_method: paymentMethod.id
-    });
-    if (confErr) throw new Error(confErr.message);
-
-    if (paymentIntent && paymentIntent.status === 'succeeded') {
-      try { sd.card.clear(); } catch(e) {}
-      if (String(sd.item.id || '').startsWith('_preview_')) {
-        // Paid from a create-form preview: save the item first, like the PayPal preview does
-        const saved = (await savePreviewItem(sd.item)) || Object.assign({}, sd.item, { id: null });
-        const txn = await recordPayment(saved, 'Stripe');
-        await afterPreviewPaid(saved, 'Stripe', txn);
-      } else {
-        const item = Object.assign({}, sd.item);
-        const txn = await recordPayment(item, 'Stripe');
-        if (g('pay-ovl')?.classList.contains('open')) closePay();
-        toast('Payment of ' + fmtAmt(item.amount, item.currency) + ' received ✓', 'ok');
-        showReceipt(item, 'Stripe', txn?.id);
-        setTimeout(function() { loadUserData(); }, 800);
-      }
-    }
-  } catch(e) {
+  } catch (e) {
     if (err) err.textContent = e.message;
     toast(e.message, 'er');
   }
@@ -3643,120 +3692,85 @@ async function scPay(id) {
 // ═══════════════════════════════════════
 async function generateApiKey() {
   if (!currentUser) return;
+  if (_dash?.api_key && !confirm('Create a new key? Your current key will stop working immediately.')) return;
   const btn = document.getElementById('gen-api-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
-
-  // Generate a secure random API key
-  const arr = new Uint8Array(32);
-  crypto.getRandomValues(arr);
-  const key = 'vy_' + Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
-
-  // NOTE: the key is stored as-is for now; hash it server-side once the Worker backend is in place
-  const { error } = await sb.from('profiles')
-    .update({ api_key: key, api_key_created: new Date().toISOString() })
-    .eq('id', currentUser.id);
-
+  const d = await apiToast('POST', '/api/api-key');
   if (btn) { btn.disabled = false; btn.textContent = '+ New Key'; }
-
-  if (error) {
-    toast('Failed: ' + error.message, 'er');
-    return;
-  }
+  if (!d) return;
 
   const valEl = document.getElementById('api-key-value');
+  if (valEl) { valEl.textContent = d.key; valEl.dataset.fullKey = d.key; }
   const copyEl = document.getElementById('api-key-copy');
-  if (valEl) {
-    valEl.textContent = key;
-    valEl.dataset.fullKey = key;
-  }
   if (copyEl) copyEl.style.display = '';
   const revokeBtn = document.getElementById('api-key-revoke');
   if (revokeBtn) revokeBtn.style.display = '';
-  if (currentProfile) currentProfile.api_key = key;
-  toast('✓ API key generated! Copy it now.', 'ok');
+  if (_dash) _dash.api_key = { prefix: d.prefix, created_at: new Date().toISOString() };
+  toast('✓ API key created — copy it now, it won\'t be shown again.', 'ok');
 }
 
-async function loadApiKey() {
-  if (!currentUser) return;
-  // Re-fetch profile to get latest api_key
-  const { data: prof } = await sb.from('profiles').select('api_key').eq('id', currentUser.id).single();
-  const key = prof?.api_key || currentProfile?.api_key;
+// Fills the API panel from the last dashboard load (the full key is never sent back by the server)
+function renderApiPanel(d) {
   const valEl = document.getElementById('api-key-value');
   const copyEl = document.getElementById('api-key-copy');
-  if (!valEl) return;
-  if (key) {
-    // Show first 16 chars then mask
-    valEl.textContent = key.substring(0, 16) + '••••••••••••••••••••••••••••••••••••••••••••••••••';
-    if (copyEl) copyEl.style.display = '';
-    const revokeEl = document.getElementById('api-key-revoke');
-    if (revokeEl) revokeEl.style.display = '';
-    // Store full key in data attribute for copy
-    valEl.dataset.fullKey = key;
-  } else {
-    valEl.textContent = 'No API key yet — click + New Key';
+  const revokeEl = document.getElementById('api-key-revoke');
+  if (valEl && !valEl.dataset.fullKey) {
+    if (d.api_key) {
+      valEl.textContent = d.api_key.prefix + '•••••••••••••••••••••••• (created ' + fd(d.api_key.created_at) + ')';
+      if (revokeEl) revokeEl.style.display = '';
+    } else {
+      valEl.textContent = 'No API key yet — click + New Key';
+      if (revokeEl) revokeEl.style.display = 'none';
+    }
     if (copyEl) copyEl.style.display = 'none';
-    const revokeBtn = document.getElementById('api-key-revoke');
-    if (revokeBtn) revokeBtn.style.display = 'none';
   }
-  // Load API usage stats
-  loadApiStats();
+  sv('api-stat-cols', String(d.api_counts?.cols || 0));
+  sv('api-stat-lnks', String(d.api_counts?.lnks || 0));
+  sv('api-stat-txns', String(d.transactions.filter(t => t.status !== 'refunded').length));
+
+  const inp = g('webhook-url-inp');
+  if (inp && document.activeElement !== inp) inp.value = d.webhook?.url || '';
+  showWebhookSecret(d.webhook?.url ? d.webhook.secret : null);
 }
 
-async function loadApiStats() {
-  if (!currentUser) return;
-  const [colsRes, lnksRes, txnsRes] = await Promise.all([
-    sb.from('vy_collections').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('source', 'api'),
-    sb.from('vy_pay_links').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('source', 'api'),
-    sb.from('vy_transactions').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('status', 'succeeded')
-  ]);
-  if (g('api-stat-cols')) g('api-stat-cols').textContent = colsRes.count || 0;
-  if (g('api-stat-lnks')) g('api-stat-lnks').textContent = lnksRes.count || 0;
-  if (g('api-stat-txns')) g('api-stat-txns').textContent = txnsRes.count || 0;
-}
+// Called when the API panel opens
+function loadApiKey() { if (_dash) renderApiPanel(_dash); }
+function loadWebhookUrl() {}
 
 async function revokeApiKey() {
   if (!currentUser) return;
   if (!confirm('Revoke this API key? Any integrations using it will stop working immediately.')) return;
-  const { error } = await sb.from('profiles').update({ api_key: null, api_key_created: null }).eq('id', currentUser.id);
-  if (error) { toast('Failed: ' + error.message, 'er'); return; }
-  if (currentProfile) currentProfile.api_key = null;
+  const d = await apiToast('DELETE', '/api/api-key');
+  if (!d) return;
   const valEl = document.getElementById('api-key-value');
-  const copyEl = document.getElementById('api-key-copy');
-  const revokeEl = document.getElementById('api-key-revoke');
-  if (valEl) { valEl.textContent = 'No API key yet — click + New Key'; delete valEl.dataset.fullKey; }
-  if (copyEl) copyEl.style.display = 'none';
-  if (revokeEl) revokeEl.style.display = 'none';
+  if (valEl) delete valEl.dataset.fullKey;
+  if (_dash) _dash.api_key = null;
   toast('API key revoked ✓', 'ok');
+  loadApiKey();
 }
 
-// Follower count on the home profile card
-async function loadFollowerCount() {
-  if (!currentUser) return;
-  const { count } = await sb.from('vy_follows')
-    .select('*', { count: 'exact', head: true }).eq('following_id', currentUser.id);
-  sv('pc-followers', String(count || 0));
+function showWebhookSecret(secret) {
+  const row = g('webhook-secret-row');
+  if (!row) return;
+  row.style.display = secret ? '' : 'none';
+  sv('webhook-secret', secret || '');
 }
 
-// Developer webhook URL (profiles.webhook_url)
-async function loadWebhookUrl() {
-  if (!currentUser) return;
-  const inp = g('webhook-url-inp'); if (!inp) return;
-  const { data } = await sb.from('profiles').select('webhook_url').eq('id', currentUser.id).single();
-  inp.value = data?.webhook_url || '';
-  if (currentProfile) currentProfile.webhook_url = data?.webhook_url || null;
-}
-
-async function saveWebhookUrl() {
+async function saveWebhookUrl(rotate) {
   if (!currentUser) return;
   const inp = g('webhook-url-inp'); const status = g('webhook-url-status');
   const url = (inp?.value || '').trim();
   if (url && !/^https:\/\/[^\s]+$/i.test(url)) { toast('Webhook URL must start with https://', 'er'); return; }
-  const { error } = await sb.from('profiles').update({ webhook_url: url || null }).eq('id', currentUser.id);
-  if (error) { toast('Failed: ' + error.message, 'er'); return; }
-  if (currentProfile) currentProfile.webhook_url = url || null;
-  if (status) status.textContent = url ? '✓ Saved' : 'Webhook removed';
-  toast(url ? 'Webhook saved ✓' : 'Webhook removed', 'ok');
+  if (rotate === true && !confirm('Create a new signing secret? Update your server with it, or webhook checks will fail.')) return;
+  const d = await apiToast('PUT', '/api/webhook', { url, rotate: rotate === true });
+  if (!d) return;
+  if (_dash) _dash.webhook = { url: d.url, secret: d.secret };
+  showWebhookSecret(d.secret);
+  if (status) status.textContent = d.url ? '✓ Saved' : 'Webhook removed';
+  toast(rotate === true ? 'New signing secret created ✓' : (d.url ? 'Webhook saved ✓' : 'Webhook removed'), 'ok');
 }
+
+function cpWebhookSecret() { copyText(g('webhook-secret')?.textContent || ''); }
 
 function cpApiKey() {
   const valEl = document.getElementById('api-key-value');
@@ -3843,35 +3857,20 @@ function downloadQR() {
 
 <script>
 // ══ RECEIPT ══
-function showReceipt(item, method, transactionId) {
-  const sym = CS(item.currency || 'USD');
-  document.getElementById('receipt-amt').textContent = sym + parseFloat(item.amount).toFixed(2);
-  document.getElementById('receipt-name').textContent = item.name || '—';
-  document.getElementById('receipt-method').textContent = method || 'PayPal';
-  document.getElementById('receipt-desc').textContent = 'Payment to ' + (item.business || 'VyCheckout');
-  document.getElementById('receipt-date').textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-  document.getElementById('receipt-ref').textContent = transactionId || ('VY-' + Date.now().toString(36).toUpperCase());
+// r = receipt from the Worker: { id, amount, currency, description, business, method, created_at }
+function showReceipt(r) {
+  document.getElementById('receipt-amt').textContent = fmtAmt(r.amount, r.currency);
+  document.getElementById('receipt-name').textContent = (r.description || '—') + (r.pending ? ' — first payment processing' : '');
+  document.getElementById('receipt-method').textContent = r.method || 'PayPal';
+  document.getElementById('receipt-desc').textContent = 'Payment to ' + (r.business || 'VyCheckout');
+  document.getElementById('receipt-date').textContent = new Date(r.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('receipt-ref').textContent = r.id || '—';
   document.getElementById('receipt-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 function closeReceipt() {
   document.getElementById('receipt-modal').classList.remove('open');
   document.body.style.overflow = '';
-}
-</script>
-
-<script>
-// ══ EMAIL NOTIFICATIONS ══
-const NOTIFY_FN = 'https://admvtnirnjfikquognbl.supabase.co/functions/v1/notify';
-
-async function notify(type, data) {
-  try {
-    fetch(NOTIFY_FN, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, data })
-    }).catch(() => {});
-  } catch(e) {}
 }
 </script>
 
@@ -3892,10 +3891,11 @@ function confirmCustomAmt() {
   const cur = coCtx.item.currency;
   coCtx.item.amount = isZD(cur) ? Math.round(val) : +val.toFixed(2);
 
-  // Hide the input and confirm button, show PayPal
+  // Hide the input and confirm button, show the payment options
   inp.closest('.co-custom-wrap').style.display = 'none';
   const cb = document.getElementById('co-confirm-btn'); if (cb) cb.style.display = 'none';
-  document.getElementById('paypal-checkout-container').style.display = '';
+  document.getElementById('co-pay').style.display = '';
+  if (_SE['co-sc']) _SE['co-sc'].item = coCtx.item;
   const display = document.getElementById('co-custom-display');
   if (display) display.textContent = fmtAmt(coCtx.item.amount, cur);
 
