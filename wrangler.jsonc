@@ -16,7 +16,8 @@
 
   // Connects vycheckout.com to this Worker on every deploy
   "routes": [
-    { "pattern": "vycheckout.com", "custom_domain": true }
+    { "pattern": "vycheckout.com", "custom_domain": true },
+{ "pattern": "www.vycheckout.com", "custom_domain": true }
   ],
   "workers_dev": true,
 
