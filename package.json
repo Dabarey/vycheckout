@@ -1,0 +1,7 @@
+{
+  "name": "vycheckout",
+  "private": true,
+  "type": "module",
+  "scripts": { "deploy": "wrangler deploy" },
+  "devDependencies": { "wrangler": "4.165.0" }
+}

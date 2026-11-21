@@ -1,0 +1,54 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vycheckout",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+
+  // index.html and _headers in this folder are served as static assets (see .assetsignore).
+  // Only /api/* and /webhooks/* run the Worker code.
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/webhooks/*"]
+  },
+
+  // Connects vycheckout.com to this Worker on every deploy
+  "routes": [
+    { "pattern": "vycheckout.com", "custom_domain": true }
+  ],
+  "workers_dev": true,
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vycheckout",
+      "database_id": "661f5894-af52-46b3-b857-0756e3f446f0"
+    }
+  ],
+
+  // Retries merchant webhooks and cleans up expired sessions every 5 minutes
+  "triggers": { "crons": ["*/5 * * * *"] },
+
+  // Public settings. Secrets (PayPal/Stripe/Google secret keys, Resend key) are set with
+  // `npx wrangler secret put NAME` — see README.md. Never put secrets in this file.
+  "vars": {
+    "APP_URL": "https://vycheckout.com",
+    "ADMIN_EMAILS": "dabarey24@gmail.com",
+    "PAYPAL_ENV": "live",
+    "PAYPAL_CLIENT_ID": "AR1RkGACuxqHKQ0dKzFlCFRXRU5oyVX1lGRQurw_PAYFjItOtl1mR8-DvMykAnB8Uhp9pd1l46Ml42uW",
+    "GOOGLE_CLIENT_ID": "420785792464-i0csdppadq8b3n61sgtcjcogrlkdik0r.apps.googleusercontent.com",
+    "STRIPE_PUBLISHABLE_KEY": "pk_live_51UVM7RE3CWf6gugiYjiGjlCY3ABll9eDExXPI6O3uW6NYF6lHqSQBQzDHwWaOtMwf7Y4GcnYkfWS1Xo5W0mH0tLc008AkP74jR",
+    "EMAIL_FROM": "VyCheckout <noreply@vycheckout.com>",
+    "PLATFORM_FEE_BPS": "1900",
+    "REFERRAL_BPS": "100",
+    "MIN_WITHDRAW_PAYPAL": "100",
+    "MIN_WITHDRAW_BANK": "500",
+    "MAX_PAYMENT": "10000",
+    "HOLD_DAYS": "7",
+    "NEW_ACCOUNT_HOLD_DAYS": "14",
+    "NEW_ACCOUNT_DAYS": "30",
+    "TURNSTILE_SITE_KEY": ""
+  }
+}
