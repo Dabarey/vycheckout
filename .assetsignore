@@ -1,0 +1,15 @@
+worker.js
+wrangler.jsonc
+package.json
+package-lock.json
+*.md
+*.zip
+*.map
+node_modules
+.git
+src
+public
+migrations
+.wrangler
+.dev.vars*
+.gitignore
