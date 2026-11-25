@@ -478,6 +478,15 @@ tbody tr:hover td{background:var(--bg);}
 .photo-pick{display:flex;align-items:center;gap:.75rem;}
 .photo-thumb{width:64px;height:64px;border-radius:10px;background:var(--al) center/cover no-repeat;border:1px dashed var(--bord);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--ink3);flex-shrink:0;}
 .photo-hint{font-size:.68rem;color:var(--ink3);margin-top:.3rem;line-height:1.4;}
+.co-seller{display:flex;align-items:center;gap:.65rem;margin-bottom:.9rem;padding-bottom:.85rem;border-bottom:1px solid rgba(255,255,255,.12);}
+.co-seller-av{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:1.25rem;overflow:hidden;flex-shrink:0;text-decoration:none;}
+.co-seller-av img{width:100%;height:100%;object-fit:cover;}
+.co-seller-txt{flex:1;min-width:0;display:flex;flex-direction:column;text-decoration:none;color:#fff;}
+.co-seller-txt b{font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.co-seller-txt span{font-size:.66rem;color:rgba(255,255,255,.55);}
+.co-follow{flex-shrink:0;font-size:.74rem;font-weight:700;padding:.38rem .85rem;border-radius:8px;border:1.5px solid #fff;background:#fff;color:#111;cursor:pointer;font-family:inherit;}
+.co-follow.on{background:transparent;color:#fff;border-color:rgba(255,255,255,.4);}
+.co-follow:disabled{opacity:.6;}
 .co-img{display:block;width:100%;aspect-ratio:1/1;max-height:360px;object-fit:cover;background:var(--al);}
 /* Stats bar compact */
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.8rem;}
@@ -2679,7 +2688,8 @@ async function initCheckout(type, id) {
 
   const business = d.business;
   const cur = item.currency || 'USD';
-  coCtx = { type, item: { ...item, amount: +item.amount, currency: cur, business } };
+  const seller = d.seller || null;
+  coCtx = { type, seller, item: { ...item, amount: +item.amount, currency: cur, business } };
   const isSub = type === 'sub';
   const isCustomAmt = item.custom_amount === true;
   const cycle = (item.cycle || 'MONTHLY').toLowerCase();
@@ -2687,7 +2697,7 @@ async function initCheckout(type, id) {
   g('co-card').innerHTML = `
     ${item.image ? `<img class="co-img" src="${esc(item.image)}" alt="">` : ''}
     <div class="co-hd">
-      <div class="mer">${esc(business)}</div>
+      ${seller ? coSellerHtml(seller) : `<div class="mer">${esc(business)}</div>`}
       <h2>${esc(item.name)}</h2>
       ${isCustomAmt
         ? `<div class="price" id="co-custom-display">${fmtAmt(0, cur)}</div>
@@ -2718,6 +2728,34 @@ async function initCheckout(type, id) {
 
   // Custom-amount links render buttons only after the payer confirms an amount
   if (!isCustomAmt) renderCheckoutButtons();
+}
+
+// Seller's profile at the top of the payment page: photo, name, followers, Follow button
+function coSellerHtml(s) {
+  const prof = s.ref_code ? '?u=' + encodeURIComponent(s.ref_code) : '#';
+  const followers = s.followers + (s.followers === 1 ? ' follower' : ' followers');
+  return `<div class="co-seller">
+      <a class="co-seller-av" href="${prof}">${s.avatar_url ? `<img src="${esc(s.avatar_url)}" alt="">` : esc(s.avatar || '👤')}</a>
+      <a class="co-seller-txt" href="${prof}"><b>${esc(s.name)}</b><span id="co-followers">${followers} · View profile</span></a>
+      ${s.is_me ? '' : `<button class="co-follow${s.is_following ? ' on' : ''}" id="co-follow" onclick="coToggleFollow()">${s.is_following ? 'Following' : 'Follow'}</button>`}
+    </div>`;
+}
+async function coToggleFollow() {
+  const s = coCtx.seller;
+  if (!s) return;
+  if (!currentUser) { toast('Create a free account or log in to follow ' + s.name); showView('signup'); return; }
+  const btn = g('co-follow');
+  btn.disabled = true;
+  const d = await apiToast(s.is_following ? 'DELETE' : 'POST', '/api/follows/' + encodeURIComponent(s.id));
+  btn.disabled = false;
+  if (!d) return;
+  s.is_following = !s.is_following;
+  s.followers += s.is_following ? 1 : -1;
+  btn.textContent = s.is_following ? 'Following' : 'Follow';
+  btn.classList.toggle('on', s.is_following);
+  const f = g('co-followers');
+  if (f) f.textContent = s.followers + (s.followers === 1 ? ' follower' : ' followers') + ' · View profile';
+  toast(s.is_following ? 'Following ' + s.name + ' ✓' : 'Unfollowed', 'ok');
 }
 
 function coEmail(required) {

@@ -1776,11 +1776,30 @@ async function suggested(env, request) {
 }
 async function publicItem(env, request, id) {
   const i = await env.DB.prepare(
-    `SELECT i.*, u.business_name, u.full_name FROM items i JOIN users u ON u.id = i.user_id
+    `SELECT i.*, u.business_name, u.full_name, u.avatar, u.avatar_key, u.ref_code FROM items i JOIN users u ON u.id = i.user_id
      WHERE i.id = ? AND i.deleted_at IS NULL AND u.suspended = 0 AND u.deleted_at IS NULL`
   ).bind(String(id).slice(0, 64)).first();
   if (!i) throw notFound("This link may have been removed.");
-  return json({ item: { ...itemView(i), source: void 0 }, business: i.business_name || i.full_name || "VyCheckout" });
+  const business = i.business_name || i.full_name || "VyCheckout";
+  const viewer = await getSessionUser(env, request);
+  const [followers, isFollowing] = await env.DB.batch([
+    env.DB.prepare("SELECT COUNT(*) AS n FROM follows WHERE following_id = ?").bind(i.user_id),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM follows WHERE follower_id = ? AND following_id = ?").bind(viewer?.id || "", i.user_id)
+  ]);
+  return json({
+    item: { ...itemView(i), source: void 0 },
+    business,
+    seller: {
+      id: i.user_id,
+      name: business,
+      avatar: i.avatar,
+      avatar_url: mediaUrl(i.avatar_key),
+      ref_code: i.ref_code,
+      followers: followers.results[0].n,
+      is_following: !!isFollowing.results[0].n,
+      is_me: viewer?.id === i.user_id
+    }
+  });
 }
 async function publicProfile(env, request, code) {
   const p = await env.DB.prepare(
