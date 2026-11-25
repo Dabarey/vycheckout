@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>VyCheckout — Payment Links for Creators</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VyCheckout">
 <!-- PayPal: loaded dynamically so currency can be set per-payment -->
 <script src="https://js.stripe.com/v3/"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -503,6 +509,45 @@ tbody tr:hover td{background:var(--bg);}
 .ship-addr{font-size:.7rem;color:var(--ink2);white-space:pre-line;margin-top:.25rem;line-height:1.4;max-width:260px;}
 .ship-btn{margin-top:.35rem;}
 .ship-banner{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;}
+.un-wrap{display:flex;align-items:center;border:1.5px solid var(--bord);border-radius:8px;background:var(--surf);overflow:hidden;}
+.un-pre{padding:.55rem 0 .55rem .7rem;color:var(--ink3);font-size:.82rem;white-space:nowrap;}
+.un-wrap input{border:0!important;padding-left:.1rem!important;flex:1;min-width:0;background:transparent;}
+.un-ok{color:var(--grn)!important;}.un-bad{color:var(--red)!important;}
+.sh-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.9rem;}
+.sh-grid a,.sh-grid button{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.75rem .3rem;border:1px solid var(--bord);border-radius:12px;background:var(--surf);color:var(--ink1);font-size:.74rem;font-weight:600;text-decoration:none;cursor:pointer;font-family:inherit;}
+.sh-grid span{font-size:1.3rem;line-height:1;}
+.co-share{display:block;margin:.8rem auto 0;background:none;border:none;color:var(--acc);font-weight:700;font-size:.8rem;cursor:pointer;font-family:inherit;}
+.dc-link{background:none;border:none;color:var(--acc);font-weight:600;font-size:.78rem;cursor:pointer;padding:0;font-family:inherit;}
+.dc-row{margin:-.2rem 0 .8rem;}
+.dc-form{display:flex;gap:.45rem;}
+.dc-form input{flex:1;min-width:0;padding:.55rem .7rem;border:1.5px solid var(--bord);border-radius:8px;font-size:.85rem;text-transform:uppercase;font-family:inherit;}
+.dc-ok{font-size:.76rem;color:var(--grn);font-weight:700;margin-top:.35rem;}
+.co-old{text-decoration:line-through;opacity:.5;font-size:1.1rem;margin-right:.4rem;font-weight:600;}
+.co-dl{font-size:.74rem;color:rgba(255,255,255,.75);margin-top:.35rem;}
+.dl-btn{display:inline-block;margin-top:1rem;background:var(--acc);color:#fff;padding:.75rem 1.2rem;border-radius:10px;font-weight:700;text-decoration:none;font-size:.9rem;}
+.post-acts{display:flex;align-items:center;gap:.2rem;padding:.45rem .6rem 0;}
+.pa{background:none;border:none;display:flex;align-items:center;gap:.3rem;padding:.35rem .45rem;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:700;color:var(--ink2);font-family:inherit;}
+.pa:hover{background:var(--s2);}
+.pa .ic{font-size:1.15rem;line-height:1;}
+.pa.on{color:#e11d48;}
+.pa-sp{flex:1;}
+.post-cmts{padding:.2rem 1rem .3rem;border-top:1px solid var(--bord);}
+.cm{display:flex;gap:.55rem;padding:.55rem 0;align-items:flex-start;}
+.cm-body{flex:1;min-width:0;font-size:.8rem;line-height:1.45;color:var(--ink2);word-break:break-word;}
+.cm-body b{color:var(--ink1);margin-right:.3rem;cursor:pointer;}
+.cm-time{font-size:.66rem;color:var(--ink3);margin-top:.1rem;}
+.cm-del{background:none;border:none;color:var(--ink3);cursor:pointer;font-size:.9rem;padding:0 .2rem;}
+.cm-form{display:flex;gap:.45rem;padding:.4rem 0 .6rem;}
+.cm-form input{flex:1;min-width:0;padding:.55rem .7rem;border:1.5px solid var(--bord);border-radius:20px;font-size:.82rem;font-family:inherit;background:var(--surf);}
+.cm-form button{background:none;border:none;color:var(--acc);font-weight:800;cursor:pointer;font-family:inherit;}
+.cm-empty{font-size:.76rem;color:var(--ink3);padding:.5rem 0;}
+.inst-banner{display:flex;align-items:center;gap:.75rem;}
+.inst-banner img{width:40px;height:40px;border-radius:10px;flex-shrink:0;}
+.inst-banner .t{flex:1;min-width:0;font-size:.8rem;line-height:1.4;}
+.faq details{border:1px solid var(--bord);border-radius:12px;background:var(--surf);margin-bottom:.6rem;padding:.2rem 1rem;}
+.faq summary{cursor:pointer;font-weight:700;padding:.7rem 0;font-size:.9rem;color:var(--ink1);}
+.faq details p{font-size:.85rem;color:var(--ink2);line-height:1.6;margin:0 0 .8rem;}
+.faq h2{font-size:1rem;margin:1.4rem 0 .6rem;}
 .co-img{display:block;width:100%;aspect-ratio:1/1;max-height:360px;object-fit:cover;background:var(--al);}
 /* Stats bar compact */
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.8rem;}
@@ -835,12 +880,13 @@ tbody tr:hover td{background:var(--bg);}
   <footer class="site-footer">
     <div class="ft-logo">VyCheckout</div>
     <div class="ft-links">
+      <a onclick="showPolicy('help')">Help &amp; FAQ</a>
       <a onclick="showPolicy('privacy')">Privacy Policy</a>
       <a onclick="showPolicy('terms')">Terms of Service</a>
       <a onclick="showView('signup')" style="color:var(--gld)">API for developers</a>
       <a href="mailto:support@vycheckout.com">Contact</a>
     </div>
-    <div class="ft-copy">© 2025 VyCheckout. All rights reserved.</div>
+    <div class="ft-copy">© 2026 VyCheckout. All rights reserved.</div>
   </footer>
 </div>
 
@@ -975,7 +1021,7 @@ tbody tr:hover td{background:var(--bg);}
     <div class="lm-share">
       <button onclick="lmWhatsApp()">💬 WhatsApp</button>
       <button onclick="lmEmail()">📧 Email</button>
-      <button onclick="lmNative()">↗ Share</button>
+      <button onclick="openShare(g('lm-link-inp').value, g('lm-name').textContent, 'Share your link')">↗ More</button>
     </div>
     <button class="lm-done" onclick="closeLm()">Done — go to my links</button>
   </div>
@@ -998,9 +1044,8 @@ tbody tr:hover td{background:var(--bg);}
   <div class="sup-panel" id="sup-panel">
     <div class="sp-h">Help &amp; Support</div>
     <div class="sp-s">How can we help you?</div>
-    <button class="sp-lk" onclick="toast('support@vycheckout.com','ok')">📧 Email support</button>
-    <button class="sp-lk" onclick="toast('Chat coming soon','ok')">💬 Live chat</button>
-    <button class="sp-lk" onclick="toast('FAQ coming soon','ok')">📖 Help center</button>
+    <button class="sp-lk" onclick="showPolicy('help')">📖 Help &amp; FAQ</button>
+    <a class="sp-lk" href="mailto:support@vycheckout.com" style="display:block;text-decoration:none">📧 Email support@vycheckout.com</a>
     <div class="trust-sec">
       <div class="trust-t">Trust &amp; Safety</div>
       <div class="ti"><span class="tic">✓</span><span>PayPal — PCI DSS Level 1 compliant</span></div>
@@ -1328,6 +1373,7 @@ async function renderUserDash() {
     <button class="sbb" onclick="spU('p-cols',this)"><span class="si">📋</span>Collections</button>
     <button class="sbb" onclick="spU('p-subs',this)"><span class="si">🔄</span>Subscriptions</button>
     <button class="sbb" onclick="spU('p-lnks',this)"><span class="si">🔗</span>Pay Links</button>
+    <button class="sbb" onclick="spU('p-codes',this)"><span class="si">🏷️</span>Discount codes</button>
     <div class="sb-lbl">Create</div>
     <button class="sbb" onclick="spU('p-nc',this)"><span class="si">➕</span>New Collection</button>
     <button class="sbb" onclick="spU('p-ns',this)"><span class="si">➕</span>New Subscription</button>
@@ -1343,6 +1389,7 @@ async function renderUserDash() {
     <div class="panel active" id="p-home">
       <div id="verify-banner"></div>
       <div id="ship-banner"></div>
+      <div id="install-banner"></div>
 
       <!-- Greeting -->
       <div class="home-greet" style="display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem">
@@ -1430,6 +1477,7 @@ async function renderUserDash() {
           <div class="fg"><label class="ship-toggle"><input type="checkbox" id="nc-ship" onchange="shipToggle('nc')"><span>📦 Needs shipping — ask the buyer for a delivery address</span></label>
             <div class="ship-fee-wrap" id="nc-sf-wrap" style="display:none"><label>Shipping fee (optional)</label><input type="number" id="nc-sf" placeholder="0.00 = free shipping" min="0" step="0.01"><div class="photo-hint">Added to the price at checkout. The <span class="fee-pct">19%</span> platform fee applies to the total.</div></div></div>
           <div class="fg"><label>Photo (optional)</label><div class="photo-pick"><div class="photo-thumb" id="nc-ph-th">📷</div><div><button type="button" class="bxs" onclick="pickPhoto('nc')">Add photo</button> <button type="button" class="bxs rd" id="nc-ph-rm" style="display:none" onclick="clearPhoto('nc')">Remove</button><div class="photo-hint">Shown in your followers’ feed and on the payment page. Collections with a photo can also appear in Discover.</div></div></div></div>
+          <div class="fg"><label>Digital file (optional)</label><div class="photo-pick"><div class="photo-thumb" id="nc-fl-th">📎</div><div><button type="button" class="bxs" onclick="pickFile('nc')">Add file</button> <button type="button" class="bxs rd" id="nc-fl-rm" style="display:none" onclick="clearFile('nc')">Remove</button><div class="photo-hint" id="nc-fl-name">PDF, ebook, music, zip… (max 25 MB). Buyers get a download link right after paying.</div></div></div></div>
           <div class="fg"><label>Description</label><textarea id="nc-d" placeholder="What is this for?"></textarea></div>
           <div class="fee-note" id="nc-fee"></div>
           <button class="ba" id="nc-btn" onclick="createCol()">Save Collection</button>
@@ -1491,6 +1539,7 @@ async function renderUserDash() {
           <div class="fg"><label class="ship-toggle"><input type="checkbox" id="nl-ship" onchange="shipToggle('nl')"><span>📦 Needs shipping — ask the buyer for a delivery address</span></label>
             <div class="ship-fee-wrap" id="nl-sf-wrap" style="display:none"><label>Shipping fee (optional)</label><input type="number" id="nl-sf" placeholder="0.00 = free shipping" min="0" step="0.01"><div class="photo-hint">Added to the price at checkout. The <span class="fee-pct">19%</span> platform fee applies to the total.</div></div></div>
           <div class="fg"><label>Photo (optional)</label><div class="photo-pick"><div class="photo-thumb" id="nl-ph-th">📷</div><div><button type="button" class="bxs" onclick="pickPhoto('nl')">Add photo</button> <button type="button" class="bxs rd" id="nl-ph-rm" style="display:none" onclick="clearPhoto('nl')">Remove</button><div class="photo-hint">Shown in your followers’ feed and on the payment page.</div></div></div></div>
+          <div class="fg"><label>Digital file (optional)</label><div class="photo-pick"><div class="photo-thumb" id="nl-fl-th">📎</div><div><button type="button" class="bxs" onclick="pickFile('nl')">Add file</button> <button type="button" class="bxs rd" id="nl-fl-rm" style="display:none" onclick="clearFile('nl')">Remove</button><div class="photo-hint" id="nl-fl-name">PDF, ebook, music, zip… (max 25 MB). Buyers get a download link right after paying.</div></div></div></div>
           <div class="fg"><label>Note (optional)</label><textarea id="nl-no" placeholder="Extra context for payer"></textarea></div>
           <div class="fee-note" id="nl-fee"></div>
           <button class="ba" id="nl-btn" onclick="createLink()">Save &amp; Get Link</button>
@@ -1503,6 +1552,24 @@ async function renderUserDash() {
           <div style="font-size:.67rem;color:var(--ink3);text-align:center;margin-top:.4rem;line-height:1.5;">🔒 PayPal &amp; Stripe secured</div>
         </div>
       </div>
+    </div>
+    <!-- DISCOUNT CODES -->
+    <div class="panel" id="p-codes">
+      <div class="pt">Discount codes</div><div class="ps">Give buyers a % off your collections and pay links</div>
+      <div class="fs" style="max-width:560px">
+        <h3>New code</h3>
+        <div class="fg2">
+          <div class="fg"><label>Code</label><input type="text" id="dc-code" placeholder="e.g. NEW10" maxlength="20" style="text-transform:uppercase" autocapitalize="characters"></div>
+          <div class="fg"><label>% off</label><input type="number" id="dc-pct" placeholder="10" min="1" max="90"></div>
+        </div>
+        <div class="fg2">
+          <div class="fg"><label>Max uses (optional)</label><input type="number" id="dc-max" placeholder="Unlimited" min="1"></div>
+          <div class="fg"><label>Expires</label><select id="dc-exp"><option value="0">Never</option><option value="7">In 7 days</option><option value="30">In 30 days</option><option value="90">In 90 days</option></select></div>
+        </div>
+        <div class="photo-hint" style="margin-bottom:.8rem">Works on all your collections and pay links — not on subscriptions or "any amount" links. Shipping isn't discounted. Buyers type the code on the payment page.</div>
+        <button class="ba" id="dc-btn" onclick="createCode()">Create code</button>
+      </div>
+      <div class="tw mt2"><table><thead><tr><th>Code</th><th>Discount</th><th>Used</th><th>Expires</th><th>Status</th><th></th></tr></thead><tbody id="dc-list"><tr><td colspan="6" style="text-align:center;padding:1.4rem;color:var(--ink3)">Loading…</td></tr></tbody></table></div>
     </div>
     <!-- TRANSACTIONS -->
     <div class="panel" id="p-txn">
@@ -1707,13 +1774,13 @@ async function loadUserData() {
   if (g('ref-inp')) g('ref-inp').value = location.origin + location.pathname + '?ref=' + (currentProfile.ref_code || '');
 
   // Home profile card
-  const profUrl = location.origin + location.pathname + '?u=' + (currentProfile.ref_code || '');
+  const profUrl = profileLink(currentProfile);
   setAvatar(g('pc-avatar'), currentProfile.avatar_url, currentProfile.avatar);
   if (g('pc-biz'))    g('pc-biz').textContent    = currentProfile.business_name || currentProfile.full_name || 'My Business';
   if (g('pc-bio'))    g('pc-bio').textContent    = currentProfile.bio || 'Tap Edit to add a bio';
   if (g('pc-url')) {
     const bizSlug = (currentProfile.business_name || currentProfile.full_name || '').substring(0, 28);
-    g('pc-url').textContent = bizSlug ? bizSlug + ' · ' + profUrl.split('?')[1] : profUrl;
+    g('pc-url').textContent = profUrl.replace(/^https?:\/\//, '');
   }
   sv('pc-followers', String(d.followers || 0));
 
@@ -1738,6 +1805,8 @@ async function loadUserData() {
   renderAccount(d);
   renderRef(d.referrals, d.ref_earned);
   renderApiPanel(d);
+  loadCodes();
+  renderInstallBanner();
 
   const firstName = currentProfile.full_name?.split(' ')[0] || 'there';
   if (g('h-title')) g('h-title').textContent = 'Hi, ' + firstName + ' 👋';
@@ -1781,7 +1850,7 @@ function avatarNode(owner, size) {
   el.className = 'av';
   el.style.cssText = 'width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.5) + 'px';
   setAvatar(el, owner.avatar_url, owner.avatar);
-  el.onclick = function() { location.href = '?u=' + encodeURIComponent(owner.ref_code || ''); };
+  el.onclick = function() { location.href = profPath(owner); };
   return el;
 }
 function gradClass(id) {
@@ -1821,7 +1890,7 @@ function followButton(ownerId) {
 
 function renderPost(item, showFollow) {
   const owner = item.owner || {};
-  const profUrl = '?u=' + encodeURIComponent(owner.ref_code || '');
+  const profUrl = profPath(owner);
   const payUrl = coUrl(item.type, item.id);
 
   const card = document.createElement('div');
@@ -1861,8 +1930,89 @@ function renderPost(item, showFollow) {
   pay.onclick = function() { location.href = payUrl; };
   foot.appendChild(cap); foot.appendChild(pay);
 
-  card.appendChild(head); card.appendChild(media); card.appendChild(foot);
+  card.appendChild(head); card.appendChild(media); card.appendChild(postActions(item, payUrl)); card.appendChild(foot);
   return card;
+}
+
+// ♥ like · 💬 comments · ↗ share, under each post
+function postActions(item, payUrl) {
+  const wrap = document.createElement('div');
+  const bar = document.createElement('div'); bar.className = 'post-acts';
+  const likeB = document.createElement('button'); likeB.className = 'pa' + (item.liked ? ' on' : '');
+  likeB.innerHTML = '<span class="ic">' + (item.liked ? '♥' : '♡') + '</span><span class="n"></span>';
+  likeB.querySelector('.n').textContent = item.likes || 0;
+  likeB.setAttribute('aria-label', 'Like');
+  likeB.onclick = async function() {
+    if (!currentUser) { toast('Log in to like posts'); return; }
+    const on = !item.liked;
+    item.liked = on; item.likes = Math.max(0, (item.likes || 0) + (on ? 1 : -1));
+    likeB.classList.toggle('on', on); likeB.querySelector('.ic').textContent = on ? '♥' : '♡'; likeB.querySelector('.n').textContent = item.likes;
+    try { const d = await api(on ? 'POST' : 'DELETE', '/api/items/' + encodeURIComponent(item.id) + '/like'); item.likes = d.likes; likeB.querySelector('.n').textContent = d.likes; }
+    catch (e) { item.liked = !on; item.likes += on ? -1 : 1; likeB.classList.toggle('on', !on); likeB.querySelector('.ic').textContent = !on ? '♥' : '♡'; likeB.querySelector('.n').textContent = item.likes; toast(e.message, 'er'); }
+  };
+  const cmB = document.createElement('button'); cmB.className = 'pa';
+  cmB.innerHTML = '<span class="ic">💬</span><span class="n"></span>';
+  cmB.querySelector('.n').textContent = item.comments || 0;
+  cmB.setAttribute('aria-label', 'Comments');
+  const shB = document.createElement('button'); shB.className = 'pa'; shB.innerHTML = '<span class="ic">↗</span>';
+  shB.setAttribute('aria-label', 'Share');
+  shB.onclick = function() { openShare(payUrl, item.name + ' — ' + priceLabel(item), 'Share this post'); };
+  const sp = document.createElement('div'); sp.className = 'pa-sp';
+  bar.appendChild(likeB); bar.appendChild(cmB); bar.appendChild(sp); bar.appendChild(shB);
+  const box = document.createElement('div'); box.className = 'post-cmts'; box.hidden = true;
+  cmB.onclick = function() { box.hidden = !box.hidden; if (!box.hidden) loadComments(item, box, cmB); };
+  wrap.appendChild(bar); wrap.appendChild(box);
+  return wrap;
+}
+
+async function loadComments(item, box, cmB) {
+  box.innerHTML = '<div class="cm-empty">Loading…</div>';
+  let d; try { d = await api('GET', '/api/items/' + encodeURIComponent(item.id) + '/comments'); }
+  catch (e) { box.innerHTML = '<div class="cm-empty">Could not load comments.</div>'; return; }
+  box.innerHTML = '';
+  const list = document.createElement('div');
+  const setCount = function(n) { item.comments = n; cmB.querySelector('.n').textContent = n; };
+  const addRow = function(c) {
+    const row = document.createElement('div'); row.className = 'cm';
+    row.appendChild(avatarNode(c.user, 28));
+    const body = document.createElement('div'); body.className = 'cm-body';
+    const nm = document.createElement('b'); nm.textContent = c.user.name; nm.onclick = function() { location.href = profPath(c.user); };
+    body.appendChild(nm); body.appendChild(document.createTextNode(c.body));
+    const t = document.createElement('div'); t.className = 'cm-time'; t.textContent = fd(c.created_at); body.appendChild(t);
+    row.appendChild(body);
+    if (c.can_delete) {
+      const del = document.createElement('button'); del.className = 'cm-del'; del.textContent = '✕'; del.title = 'Delete comment';
+      del.onclick = async function() {
+        if (!confirm('Delete this comment?')) return;
+        const r = await apiToast('DELETE', '/api/comments/' + encodeURIComponent(c.id));
+        if (r) { row.remove(); setCount(Math.max(0, (item.comments || 1) - 1)); if (!list.children.length) list.innerHTML = '<div class="cm-empty">No comments yet.</div>'; }
+      };
+      row.appendChild(del);
+    }
+    const empty = list.querySelector('.cm-empty'); if (empty) empty.remove();
+    list.appendChild(row);
+  };
+  if (!d.comments.length) list.innerHTML = '<div class="cm-empty">No comments yet.</div>';
+  d.comments.forEach(addRow);
+  setCount(d.comments.length);
+  box.appendChild(list);
+  if (currentUser) {
+    const form = document.createElement('form'); form.className = 'cm-form';
+    const inp = document.createElement('input'); inp.placeholder = 'Add a comment…'; inp.maxLength = 300;
+    const send = document.createElement('button'); send.type = 'submit'; send.textContent = 'Post';
+    form.appendChild(inp); form.appendChild(send);
+    form.onsubmit = async function(e) {
+      e.preventDefault();
+      const text = inp.value.trim(); if (!text) return;
+      send.disabled = true;
+      const r = await apiToast('POST', '/api/items/' + encodeURIComponent(item.id) + '/comments', { body: text });
+      send.disabled = false;
+      if (r) { inp.value = ''; addRow(r.comment); setCount((item.comments || 0) + 1); }
+    };
+    box.appendChild(form);
+  } else {
+    const n = document.createElement('div'); n.className = 'cm-empty'; n.textContent = 'Log in to comment.'; box.appendChild(n);
+  }
 }
 
 function feedEmpty(icon, msg, sub, action) {
@@ -1947,7 +2097,7 @@ async function loadSuggested() {
     c.appendChild(avatarNode(a, 56));
     const n = document.createElement('div');
     n.className = 'sugg-name'; n.textContent = a.business_name || 'User';
-    n.onclick = function() { location.href = '?u=' + encodeURIComponent(a.ref_code || ''); };
+    n.onclick = function() { location.href = profPath(a); };
     const sub = document.createElement('div');
     sub.className = 'sugg-sub'; sub.textContent = a.followers + (a.followers === 1 ? ' follower' : ' followers');
     c.appendChild(n); c.appendChild(sub); c.appendChild(followButton(a.id));
@@ -2028,6 +2178,143 @@ async function uploadPhoto(prefix, file) {
     toast(e.message, 'er');
   }
 }
+// ── Profile links: vycheckout.com/<username>, or ?u=<code> until a username is chosen
+function profPath(o) { return o && o.username ? '/' + o.username : '/?u=' + encodeURIComponent((o && o.ref_code) || ''); }
+function profileLink(o) { return location.origin + profPath(o); }
+
+// ── Share sheet (WhatsApp, Facebook, X, Telegram, Email, copy, phone share menu)
+let _share = { url: '', text: '' };
+function openShare(url, text, title) {
+  _share = { url: url, text: text || '' };
+  g('sh-title').textContent = title || 'Share';
+  g('sh-url').value = url;
+  g('sh-copy').textContent = 'Copy';
+  const msg = encodeURIComponent((text ? text + ' ' : '') + url);
+  g('sh-wa').href = 'https://wa.me/?text=' + msg;
+  g('sh-fb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+  g('sh-x').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text || '') + '&url=' + encodeURIComponent(url);
+  g('sh-tg').href = 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text || '');
+  g('sh-em').href = 'mailto:?subject=' + encodeURIComponent(text || 'VyCheckout') + '&body=' + msg;
+  g('sh-ovl').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeShare() { g('sh-ovl').classList.remove('open'); document.body.style.overflow = ''; }
+async function shareCopy() {
+  try { await navigator.clipboard.writeText(_share.url); }
+  catch (e) { const i = g('sh-url'); i.select(); document.execCommand('copy'); }
+  g('sh-copy').textContent = 'Copied ✓';
+  toast('Link copied ✓', 'ok');
+}
+async function shareNative() {
+  if (navigator.share) { try { await navigator.share({ title: _share.text || 'VyCheckout', text: _share.text, url: _share.url }); } catch (e) {} }
+  else shareCopy();
+}
+
+// ── Digital files for sale (sent to the buyer after payment)
+const _file = {};
+function pickFile(prefix) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.onchange = function() { if (inp.files && inp.files[0]) uploadSaleFile(prefix, inp.files[0]); };
+  inp.click();
+}
+async function uploadSaleFile(prefix, file) {
+  const nameEl = g(prefix + '-fl-name'), th = g(prefix + '-fl-th');
+  if (file.size > 25 * 1024 * 1024) { toast('That file is too large (max 25 MB)', 'er'); return; }
+  if (th) th.textContent = '⏳';
+  if (nameEl) nameEl.textContent = 'Uploading ' + file.name + '…';
+  try {
+    const res = await fetch('/api/files', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'VyCheckout', 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) },
+      body: file,
+    });
+    let d = null; try { d = await res.json(); } catch (e) {}
+    if (!res.ok) throw new Error((d && d.error) || 'Upload failed (' + res.status + ')');
+    _file[prefix] = d;
+    if (th) th.textContent = '✅';
+    if (nameEl) nameEl.textContent = d.name + ' · ' + (d.bytes > 1048576 ? (d.bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(d.bytes / 1024)) + ' KB') + ' — buyers can download it after paying.';
+    if (g(prefix + '-fl-rm')) g(prefix + '-fl-rm').style.display = '';
+  } catch (e) { clearFile(prefix); toast(e.message || 'Upload failed', 'er'); }
+}
+function clearFile(prefix) {
+  delete _file[prefix];
+  if (g(prefix + '-fl-th')) g(prefix + '-fl-th').textContent = '📎';
+  if (g(prefix + '-fl-name')) g(prefix + '-fl-name').textContent = 'PDF, ebook, music, zip… (max 25 MB). Buyers get a download link right after paying.';
+  if (g(prefix + '-fl-rm')) g(prefix + '-fl-rm').style.display = 'none';
+}
+
+// ── Discount codes (seller panel)
+async function loadCodes() {
+  const tb = g('dc-list'); if (!tb) return;
+  let d; try { d = await api('GET', '/api/codes'); } catch (e) { return; }
+  if (!d.codes.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.4rem;color:var(--ink3)">No codes yet</td></tr>'; return; }
+  tb.innerHTML = d.codes.map(function(c) {
+    const st = !c.active ? '<span class="pill pr">Off</span>' : c.expired ? '<span class="pill pgo">Expired</span>' : c.used_up ? '<span class="pill pgo">Used up</span>' : '<span class="pill pg">Active</span>';
+    return '<tr><td><strong style="font-family:monospace">' + esc(c.code) + '</strong></td><td>' + c.percent + '% off</td>' +
+      '<td>' + c.uses + (c.max_uses ? ' / ' + c.max_uses : '') + '</td><td>' + (c.expires_at ? fd(c.expires_at) : 'Never') + '</td><td>' + st + '</td>' +
+      '<td style="white-space:nowrap"><button class="bxs" data-act="code-toggle" data-id="' + esc(c.id) + '" data-on="' + (c.active ? '0' : '1') + '">' + (c.active ? 'Turn off' : 'Turn on') + '</button> ' +
+      '<button class="bxs rd" data-act="code-del" data-id="' + esc(c.id) + '">Delete</button></td></tr>';
+  }).join('');
+}
+async function createCode() {
+  const code = (gi('dc-code') || '').trim().toUpperCase(), percent = parseInt(gi('dc-pct') || '0', 10);
+  if (!/^[A-Z0-9]{3,20}$/.test(code)) { toast('Code: 3–20 letters or numbers, no spaces', 'er'); g('dc-code')?.focus(); return; }
+  if (!(percent >= 1 && percent <= 90)) { toast('Discount must be 1–90%', 'er'); g('dc-pct')?.focus(); return; }
+  setBL('dc-btn', true, 'Creating…');
+  const d = await apiToast('POST', '/api/codes', { code: code, percent: percent, max_uses: parseInt(gi('dc-max') || '0', 10) || null, expires_days: parseInt(gi('dc-exp') || '0', 10) });
+  setBL('dc-btn', false, 'Create code');
+  if (!d) return;
+  ['dc-code', 'dc-pct', 'dc-max'].forEach(function(id) { if (g(id)) g(id).value = ''; });
+  toast('Code ' + d.code.code + ' created — ' + d.code.percent + '% off ✓', 'ok');
+  loadCodes();
+}
+
+// ── Payment page: discount code
+function showDiscount() {
+  const row = g('co-dc-row'); if (!row) return;
+  row.innerHTML = '<div class="dc-form"><input id="co-dc" placeholder="Discount code" maxlength="20" autocapitalize="characters"><button class="bxs" id="co-dc-btn" onclick="applyDiscount()">Apply</button></div><div id="co-dc-msg"></div>';
+  g('co-dc').focus();
+  g('co-dc').addEventListener('keydown', function(e) { if (e.key === 'Enter') applyDiscount(); });
+}
+async function applyDiscount() {
+  const code = (gi('co-dc') || '').trim().toUpperCase(); if (!code) return;
+  const btn = g('co-dc-btn'); btn.disabled = true;
+  let d;
+  try { d = await api('POST', '/api/public/discount', { item_id: coCtx.item.id, code: code }); }
+  catch (e) { btn.disabled = false; g('co-dc-msg').innerHTML = '<div class="dc-ok" style="color:var(--red)">' + esc(e.message) + '</div>'; return; }
+  coCtx.discount = d;
+  const it = coCtx.item, cur = it.currency;
+  const off = isZD(cur) ? Math.round(it.amount * d.percent / 100) : Math.round(it.amount * d.percent) / 100;
+  const ship = it.ship_required ? +it.ship_fee : 0;
+  const pe = document.querySelector('#co-card .co-hd .price');
+  if (pe) pe.innerHTML = '<span class="co-old">' + esc(fmtAmt(it.amount + ship, cur)) + '</span>' + esc(fmtAmt(it.amount - off + ship, cur));
+  g('co-dc-row').innerHTML = '<div class="dc-ok">🏷️ ' + esc(d.code) + ' applied — ' + d.percent + '% off (−' + esc(fmtAmt(off, cur)) + ')</div>';
+  toast('Discount applied ✓', 'ok');
+}
+
+// ── Install as an app
+let _installEvt = null;
+window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); _installEvt = e; renderInstallBanner(); });
+window.addEventListener('appinstalled', function() { _installEvt = null; renderInstallBanner(); toast('VyCheckout installed ✓', 'ok'); });
+function isStandalone() { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }
+function renderInstallBanner() {
+  const el = g('install-banner'); if (!el) return;
+  let dismissed = false; try { dismissed = localStorage.getItem('vy_install_dismissed') === '1'; } catch (e) {}
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent);
+  if (isStandalone() || dismissed || (!_installEvt && !ios)) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="ibox inst-banner" style="margin-bottom:1rem"><img src="/icon-192.png" alt=""><div class="t"><b>Get the VyCheckout app</b><br>' +
+    (_installEvt ? 'Install it on your home screen for one-tap access.' : 'In Safari tap <b>Share</b> → <b>Add to Home Screen</b>.') + '</div>' +
+    (_installEvt ? '<button class="bxs" onclick="installApp()">Install</button>' : '') + '<button class="bxs" onclick="dismissInstall()" aria-label="Dismiss">✕</button></div>';
+}
+async function installApp() {
+  if (!_installEvt) return;
+  _installEvt.prompt();
+  try { await _installEvt.userChoice; } catch (e) {}
+  _installEvt = null; renderInstallBanner();
+}
+function dismissInstall() { try { localStorage.setItem('vy_install_dismissed', '1'); } catch (e) {} renderInstallBanner(); }
+
 // Shipping settings on the create forms
 function shipToggle(prefix) {
   const on = !!g(prefix + '-ship')?.checked;
@@ -2060,9 +2347,10 @@ function cardActions(type, it, payLabel, table) {
     id: it.id, type, name: it.name, amount: +it.amount, currency: it.currency || 'USD', custom: !!it.custom_amount,
     business: currentProfile?.business_name || currentProfile?.full_name || ''
   };
-  return `<div class="lb"><input readonly value="${esc(coUrl(type, it.id))}"><button data-act="copy">Copy</button></div>
+  return `${it.has_file ? '<div class="txn-sub" style="margin-bottom:.35rem">📎 Includes a digital download</div>' : ''}<div class="lb"><input readonly value="${esc(coUrl(type, it.id))}"><button data-act="copy">Copy</button></div>
       <div class="cacts mt1">
         <button class="bxs bl" data-act="pay" data-key="${esc(key)}">${payLabel}</button>
+        <button class="bxs" data-act="share" data-key="${esc(key)}">Share</button>
         <button class="bxs" data-act="qr" data-key="${esc(key)}">QR</button>
         <button class="bxs rd" data-act="del" data-table="${table}" data-id="${esc(it.id)}">Delete</button>
       </div>`;
@@ -2071,6 +2359,18 @@ function cardActions(type, it, payLabel, table) {
 document.addEventListener('click', function(e) {
   const shipBtn = e.target.closest('[data-act="ship"]');
   if (shipBtn) { markShipped(shipBtn.getAttribute('data-id')); return; }
+  const shareBtn = e.target.closest('[data-act="share"]');
+  if (shareBtn) { const it = _items[shareBtn.getAttribute('data-key')]; if (it) openShare(coUrl(it.type, it.id), it.name + (it.custom ? '' : ' — ' + fmtAmt(it.amount, it.currency)), 'Share your link'); return; }
+  const codeBtn = e.target.closest('[data-act="code-toggle"],[data-act="code-del"]');
+  if (codeBtn) {
+    const id = codeBtn.getAttribute('data-id');
+    if (codeBtn.getAttribute('data-act') === 'code-del') {
+      if (confirm('Delete this discount code? Buyers will no longer be able to use it.')) apiToast('DELETE', '/api/codes/' + encodeURIComponent(id)).then(function(r) { if (r) loadCodes(); });
+    } else {
+      apiToast('PATCH', '/api/codes/' + encodeURIComponent(id), { active: codeBtn.getAttribute('data-on') === '1' }).then(function(r) { if (r) loadCodes(); });
+    }
+    return;
+  }
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const act = b.dataset.act;
@@ -2151,7 +2451,7 @@ function renderTxns(txns) {
     <td>${fd(t.created_at)}</td>
     <td>${t.payer_name ? '<strong>' + esc(t.payer_name) + '</strong>' : '<span style="color:var(--ink3)">—</span>'}${t.payer_email ? '<div class="txn-sub">' + esc(t.payer_email) + '</div>' : ''}${t.payer_note ? '<div class="txn-note">“' + esc(t.payer_note) + '”</div>' : ''}</td>
     <td>${esc(t.description || '')}${shipCell(t)}</td>
-    <td>${fmtAmt(t.gross_amount, t.currency)}${t.shipping_fee ? '<div class="txn-sub">incl. ' + fmtAmt(t.shipping_fee, t.currency) + ' shipping</div>' : ''}</td>
+    <td>${fmtAmt(t.gross_amount, t.currency)}${t.shipping_fee ? '<div class="txn-sub">incl. ' + fmtAmt(t.shipping_fee, t.currency) + ' shipping</div>' : ''}${t.discount_code ? '<div class="txn-sub">🏷️ ' + esc(t.discount_code) + ' (−' + fmtAmt(t.discount_amount, t.currency) + ')</div>' : ''}</td>
     <td style="color:var(--grn)">${fmtAmt(t.net_amount, t.currency)}</td>
     <td><span class="pill pb">${esc(t.payment_method)}</span></td>
     <td>${statusPill(t)}</td>
@@ -2372,7 +2672,9 @@ async function saveItem(type, body, btnId, btnText) {
   const ph = _photo[PHOTO_PREFIX[type]];
   if (ph) body.image_key = ph.key;
   Object.assign(body, shipSettings(PHOTO_PREFIX[type]));
-  const sig = [body.name, body.amount, body.currency, body.image_key || '', body.ship_required ? 'ship' + (body.ship_fee || 0) : ''].join('|');
+  const fl = _file[PHOTO_PREFIX[type]];
+  if (fl) body.file_key = fl.key;
+  const sig = [body.name, body.amount, body.currency, body.image_key || '', body.ship_required ? 'ship' + (body.ship_fee || 0) : '', body.file_key || ''].join('|');
   const pre = _previewSaved[type];
   let item;
   if (pre && pre.sig === sig) {
@@ -2397,7 +2699,7 @@ async function createCol() {
   if (!item) return;
   showCreatedLink('Collection created!', name, coUrl('col', item.id));
   ['nc-n', 'nc-a', 'nc-d'].forEach(id => { if (g(id)) g(id).value = ''; });
-  clearPhoto('nc'); clearShip('nc');
+  clearPhoto('nc'); clearShip('nc'); clearFile('nc');
   if (g('nc-pay-box')) g('nc-pay-box').style.display = 'none';
   await loadUserData();
 }
@@ -2425,7 +2727,7 @@ async function createLink() {
   if (!item) return;
   showCreatedLink('Payment link ready!', name, coUrl('lnk', item.id));
   ['nl-n', 'nl-a', 'nl-no'].forEach(id => { if (g(id)) g(id).value = ''; });
-  clearPhoto('nl'); clearShip('nl');
+  clearPhoto('nl'); clearShip('nl'); clearFile('nl');
   if (g('nl-pay-box')) g('nl-pay-box').style.display = 'none';
   await loadUserData();
 }
@@ -2785,6 +3087,7 @@ async function initCheckout(type, id) {
                oninput="updateCustomAmt('${esc(cur)}')">
            </div>`
         : `<div class="price">${fmtAmt(+item.amount + (item.ship_required ? +item.ship_fee : 0), cur)}${isSub ? `<span style="font-size:.9rem;font-weight:600;opacity:.7"> / ${esc(cycle.replace('ly', '').replace('annual', 'year'))}</span>` : ''}</div>`}
+      ${item.has_file ? '<div class="co-dl">📎 Instant download after payment</div>' : ''}
       ${item.ship_required ? `<div class="co-breakdown">📦 ${isCustomAmt ? 'Plus ' : (fmtAmt(item.amount, cur) + ' + ')}${+item.ship_fee > 0 ? fmtAmt(item.ship_fee, cur) + ' shipping' : 'free shipping'}</div>` : ''}
       ${isSub ? `<div class="desc">Charged ${esc(cycle)} until you cancel. You can cancel any time from your receipt email.</div>` : ''}
       ${item.description ? `<div class="desc">${esc(item.description)}</div>` : ''}
@@ -2793,6 +3096,7 @@ async function initCheckout(type, id) {
     <div class="co-bd">
       ${isCustomAmt ? `<button class="ba" id="co-confirm-btn" style="width:100%;margin-bottom:.9rem" onclick="confirmCustomAmt()">Confirm Amount &amp; Pay</button>` : ''}
       <div id="co-pay" style="${isCustomAmt ? 'display:none' : ''}">
+        ${!isSub && !isCustomAmt ? '<div class="dc-row" id="co-dc-row"><button class="dc-link" onclick="showDiscount()">🏷️ Have a discount code?</button></div>' : ''}
         <div class="co-fields">
           <label class="co-lbl" for="co-name">Your details (shared with the seller)</label>
           <input type="text" id="co-name" placeholder="Your full name" autocomplete="name" maxlength="120">
@@ -2812,6 +3116,7 @@ async function initCheckout(type, id) {
         <div class="pm-pane" id="co-sc-p"><div class="sc-wrap"><div id="co-sc"></div></div><div class="sc-err" id="co-sc-err"></div><button class="sc-btn" id="co-sc-btn" onclick="coCardPay()">${isSub ? 'Subscribe with Card' : 'Pay with Card'}</button></div>
       </div>
       <div style="font-size:.67rem;color:var(--ink3);text-align:center;margin-top:.7rem;line-height:1.5;">🔒 Payments processed by PayPal and Stripe. Card details never touch our servers.</div>
+      <button class="co-share" onclick="openShare(location.href, coCtx.item.name + ' — ' + coCtx.item.business, 'Share this link')">↗ Share this link</button>
     </div>`;
 
   // Custom-amount links render buttons only after the payer confirms an amount
@@ -2820,7 +3125,7 @@ async function initCheckout(type, id) {
 
 // Seller's profile at the top of the payment page: photo, name, followers, Follow button
 function coSellerHtml(s) {
-  const prof = s.ref_code ? '?u=' + encodeURIComponent(s.ref_code) : '#';
+  const prof = s.ref_code ? profPath(s) : '#';
   const followers = s.followers + (s.followers === 1 ? ' follower' : ' followers');
   return `<div class="co-seller">
       <a class="co-seller-av" href="${prof}">${s.avatar_url ? `<img src="${esc(s.avatar_url)}" alt="">` : esc(s.avatar || '👤')}</a>
@@ -2852,7 +3157,8 @@ function coPayer(emailRequired) {
   if (name.length < 2) { toast('Enter your name so the seller knows who paid', 'er'); g('co-name')?.focus(); return null; }
   const email = coEmail(emailRequired);
   if (email === null) return null;
-  const out = { payer_name: name, payer_email: email || undefined, payer_note: (gi('co-note') || '').trim() || undefined };
+  const out = { payer_name: name, payer_email: email || undefined, payer_note: (gi('co-note') || '').trim() || undefined,
+    discount_code: (coCtx && coCtx.discount && coCtx.discount.code) || undefined };
   if (coCtx && coCtx.item.ship_required) {
     const v = id => (gi('co-s-' + id) || '').trim();
     const shipping = { name, phone: v('phone'), line1: v('line1'), line2: v('line2'), city: v('city'), region: v('region'), postal: v('postal'), country: v('country') };
@@ -2883,6 +3189,7 @@ function checkoutDone(receipt) {
     <div class="co-bd" style="text-align:center;padding:2rem">
       <div style="font-size:3rem;margin-bottom:.75rem">✅</div>
       <div style="font-weight:700;margin-bottom:.35rem">Thank you!</div>
+      ${receipt.download_url ? `<a class="dl-btn" href="${esc(receipt.download_url)}">⬇ Download your file</a><div style="font-size:.72rem;color:var(--ink3);margin:.5rem 0 .8rem">We also emailed you this link.</div>` : ''}
       <div style="font-size:.8rem;color:var(--ink2)">${receipt.pending ? 'Your subscription is active. PayPal is finishing the first payment — your receipt email follows shortly.' : (isSub ? 'Your subscription is active. A receipt with a cancel link was emailed to you.' : 'Your payment has been received. You can close this page.')}</div>
     </div>`;
   showReceipt(receipt);
@@ -3415,7 +3722,7 @@ async function afterPreviewPaid(type, receipt) {
   const pre = { col: 'nc', sub: 'ns', lnk: 'nl' }[type];
   [pre + '-n', pre + '-a', pre + '-d', pre + '-no'].forEach(id => { if (g(id)) g(id).value = ''; });
   if (g(pre + '-pay-box')) g(pre + '-pay-box').style.display = 'none';
-  clearPhoto(pre);
+  clearPhoto(pre); clearFile(pre);
   await loadUserData();
   quickNav({ col: 'p-cols', sub: 'p-subs', lnk: 'p-lnks' }[type]);
 }
@@ -3550,6 +3857,17 @@ async function boot() {
     hideLoader(); await initProfile(uCode); return;
   }
 
+  // vycheckout.com/help and vycheckout.com/<username>
+  const path = location.pathname.replace(/^\/|\/$/g, '');
+  if (path.toLowerCase() === 'help') {
+    if (me) await afterLogin(me, { quiet: true }); else { updateNav(); showView('landing'); }
+    hideLoader(); showPolicy('help'); return;
+  }
+  if (/^[A-Za-z0-9_]{3,30}$/.test(path)) {
+    if (me) await afterLogin(me, { quiet: true });
+    hideLoader(); await initProfile(path); return;
+  }
+
   // Referral link: only meaningful for people who don't have an account yet
   const ref = params.get('ref');
   if (ref && !me) {
@@ -3563,11 +3881,15 @@ async function boot() {
   hideLoader();
   if (me) {
     await afterLogin(me);
+    const go = params.get('go');                       // app shortcuts (New collection, Withdraw)
+    if (go && /^p-[a-z]+$/.test(go) && g(go)) quickNav(go);
   } else {
     updateNav();
     showView('landing');
   }
 }
+// Installable app: register the service worker (offline page only; nothing live is cached)
+if ('serviceWorker' in navigator) window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js').catch(function() {}); });
 // Start only after every <script> block on the page has been parsed
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();
@@ -3575,6 +3897,42 @@ else boot();
 
 
 <!-- ══ PRIVACY POLICY PAGE ══ -->
+<!-- ══ HELP & FAQ ══ -->
+<div class="pol-page" id="pol-help">
+  <nav class="pol-nav">
+    <button class="pol-back" onclick="closePolicy()">← Back</button>
+    <span class="pol-nav-logo">VyCheckout</span>
+  </nav>
+  <div class="pol-content faq">
+    <h1>Help &amp; FAQ</h1>
+    <p class="pol-date">Can't find an answer? Email <a href="mailto:support@vycheckout.com">support@vycheckout.com</a> — we reply within 1–2 business days.</p>
+
+    <h2>Getting paid</h2>
+    <details><summary>How much does VyCheckout cost?</summary><p>Joining is free and there are no monthly fees. When you get paid, VyCheckout keeps <span class="fee-pct">19%</span> of each payment (including any shipping) and you keep the rest. Card and PayPal processing are included.</p></details>
+    <details><summary>Why can't I withdraw a payment straight away?</summary><p>New payments are held for 7 days (14 days for accounts younger than 30 days) before you can withdraw them. Buyers can dispute card payments, so the hold makes sure refunds and chargebacks can be covered. Your dashboard shows how much is on hold and when it becomes available.</p></details>
+    <details><summary>How do withdrawals work?</summary><p>Go to Withdraw, choose PayPal (minimum $100) or bank transfer (minimum $500), and send the request. We review it and send the money within 5–14 business days. You'll get an email when it's approved and when it's paid. Confirm your email address before your first withdrawal.</p></details>
+    <details><summary>What's the smallest payment?</summary><p>$3 (or the same amount in other currencies; ¥300 for yen). The largest single payment is $10,000.</p></details>
+    <details><summary>Which currencies can I charge in?</summary><p>USD, EUR, GBP, AUD, CAD, SGD, JPY, MXN and HKD. Buyers pay in the currency you choose and you're paid out in that currency.</p></details>
+
+    <h2>Selling</h2>
+    <details><summary>Collections, subscriptions and pay links — what's the difference?</summary><p><b>Collections</b> are public products or fundraisers that appear on your profile and in your followers' feeds. <b>Subscriptions</b> charge buyers automatically every week, month, quarter or year until they cancel. <b>Pay links</b> are one-off links, like an invoice, that you send to one person; they can expire.</p></details>
+    <details><summary>How do I sell a digital product (ebook, course, music)?</summary><p>When you create a collection or pay link, tap <b>Add file</b> and upload it (up to 25 MB). After paying, the buyer gets a download button straight away and a download link in their receipt email.</p></details>
+    <details><summary>How does shipping work?</summary><p>Tick <b>Needs shipping</b> when you create an item and optionally add a shipping fee. Buyers then enter a delivery address. You'll see it in Payments → Transactions; once you've sent the order, tap <b>Mark shipped</b> and add the courier and tracking number — the buyer is emailed automatically.</p></details>
+    <details><summary>How do discount codes work?</summary><p>Create codes under <b>Discount codes</b> (for example NEW10 for 10% off). They work on all your collections and pay links, but not on subscriptions or "any amount" links, and shipping isn't discounted. You can limit how many times a code can be used and when it expires.</p></details>
+    <details><summary>How do I get my own profile link?</summary><p>Tap <b>Edit Profile</b> and choose a profile link, like vycheckout.com/yourname. Share it anywhere — it shows all your collections in one place.</p></details>
+
+    <h2>Buyers</h2>
+    <details><summary>Is it safe to pay?</summary><p>Payments are processed by Stripe and PayPal. Card details go straight to Stripe and never touch VyCheckout's servers.</p></details>
+    <details><summary>I paid but need help with my order</summary><p>Contact the seller first — their name is on the payment page and your receipt. If you can't reach them, email support@vycheckout.com with your receipt reference.</p></details>
+    <details><summary>How do refunds work?</summary><p>Refunds are arranged with the seller. If a payment is refunded or charged back, the money is taken back from the seller's balance (and from any referral earnings on that sale).</p></details>
+
+    <h2>Referrals &amp; account</h2>
+    <details><summary>How does the 1% referral programme work?</summary><p>Share your referral link (Referrals in your dashboard). When someone signs up with it, you earn 1% of every payment they receive, for as long as they use VyCheckout. It comes out of VyCheckout's fee — your referrals keep their full share. Referral earnings follow the same hold as payments.</p></details>
+    <details><summary>Can I install VyCheckout as an app?</summary><p>Yes. On Android, tap <b>Install</b> on your dashboard (or the browser menu → Install app). On iPhone, open vycheckout.com in Safari, tap Share, then <b>Add to Home Screen</b>.</p></details>
+    <details><summary>How do I delete my account?</summary><p>Go to Account → Delete account. You'll need to withdraw or settle any balance first.</p></details>
+  </div>
+</div>
+
 <div class="pol-page" id="pol-privacy">
   <nav class="pol-nav">
     <button class="pol-back" onclick="closePolicy()">← Back</button>
@@ -3713,15 +4071,15 @@ else boot();
 
 <script>
 function showPolicy(type) {
-  document.getElementById('pol-privacy').classList.remove('open');
-  document.getElementById('pol-terms').classList.remove('open');
+  document.querySelectorAll('.pol-page').forEach(function(p) { p.classList.remove('open'); });
+  const sp = document.getElementById('sup-panel'); if (sp) sp.classList.remove('open');
   const el = document.getElementById('pol-' + type);
   if (el) { el.classList.add('open'); el.scrollTop = 0; }
   document.body.style.overflow = 'hidden';
 }
 function closePolicy() {
-  document.getElementById('pol-privacy').classList.remove('open');
-  document.getElementById('pol-terms').classList.remove('open');
+  document.querySelectorAll('.pol-page').forEach(function(p) { p.classList.remove('open'); });
+  if (location.pathname.replace(/\/$/, '') === '/help') history.replaceState(null, '', '/');
   document.body.style.overflow = '';
 }
 // Escape closes whichever popup is on top
@@ -3782,6 +4140,22 @@ document.addEventListener('keydown', e => {
   </div>
 </div>
 
+<!-- ══ SHARE SHEET ══ -->
+<div class="ep-ovl" id="sh-ovl" onclick="if(event.target===this)closeShare()">
+  <div class="ep-box">
+    <div class="ep-title" id="sh-title">Share</div>
+    <div class="lm-link-row"><input type="text" readonly id="sh-url" value=""><button class="lm-copy" id="sh-copy" onclick="shareCopy()">Copy</button></div>
+    <div class="sh-grid">
+      <a id="sh-wa" target="_blank" rel="noopener"><span>💬</span>WhatsApp</a>
+      <a id="sh-fb" target="_blank" rel="noopener"><span>📘</span>Facebook</a>
+      <a id="sh-x" target="_blank" rel="noopener"><span>𝕏</span>X</a>
+      <a id="sh-tg" target="_blank" rel="noopener"><span>✈️</span>Telegram</a>
+      <a id="sh-em"><span>📧</span>Email</a>
+      <button onclick="shareNative()"><span>↗</span>More</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ EDIT PROFILE MODAL ══ -->
 <div class="ep-ovl" id="ep-ovl" onclick="if(event.target===this)closeEditProfile()">
   <div class="ep-box">
@@ -3789,6 +4163,11 @@ document.addEventListener('keydown', e => {
     <div class="fg" style="margin-bottom:.7rem">
       <label>Business Name</label>
       <input type="text" id="ep-biz" placeholder="Your business name" maxlength="60"/>
+    </div>
+    <div class="fg" style="margin-bottom:.7rem">
+      <label>Profile link</label>
+      <div class="un-wrap"><span class="un-pre">vycheckout.com/</span><input type="text" id="ep-un" maxlength="30" placeholder="yourname" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="checkUsername()"></div>
+      <div class="photo-hint" id="ep-un-hint">Letters, numbers and _ — this becomes the link you share.</div>
     </div>
     <div class="fg" style="margin-bottom:.7rem">
       <label>Bio <span style="color:var(--ink3);font-weight:400">(optional)</span></label>
@@ -3831,6 +4210,9 @@ async function initProfile(refCode) {
   const prof = d.profile;
   _igProfileId = prof.id;
   window._currentProfileCode = prof.ref_code; // Share button shares THIS profile, not the viewer's
+  window._currentProfileLink = profileLink(prof);
+  window._currentProfileName = prof.business_name || prof.full_name || 'VyCheckout seller';
+  if (prof.username && location.search.includes('u=')) history.replaceState(null, '', '/' + prof.username);
 
   const biz = prof.business_name || prof.full_name || 'VyCheckout User';
   setAvatar(document.getElementById('ig-av'), prof.avatar_url, prof.avatar);
@@ -3903,19 +4285,9 @@ async function igToggleFollow() {
 }
 
 function shareProfileUrl() {
-  const code = (window._currentProfileCode || (currentProfile && currentProfile.ref_code));
-  if (!code) { toast('No profile to share', 'er'); return; }
-  const url = location.origin + location.pathname + '?u=' + code;
-  if (navigator.share) {
-    navigator.share({ title: 'VyCheckout Profile', url: url }).catch(function(){});
-  } else {
-    navigator.clipboard.writeText(url).then(function() { toast('Profile link copied! ✓', 'ok'); }).catch(function(){
-      const ta = document.createElement('textarea');
-      ta.value = url; ta.style.position='fixed'; ta.style.opacity='0';
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
-      document.body.removeChild(ta); toast('Profile link copied! ✓', 'ok');
-    });
-  }
+  const url = window._currentProfileLink || (currentProfile && profileLink(currentProfile));
+  if (!url) { toast('No profile to share', 'er'); return; }
+  openShare(url, window._currentProfileName || currentProfile?.business_name || 'My VyCheckout profile', 'Share profile');
 }
 
 // ── Edit Profile Modal
@@ -3941,6 +4313,7 @@ function openEditProfile() {
       grid.appendChild(sp);
     });
   }
+  if (g('ep-un')) { g('ep-un').value = currentProfile.username || ''; g('ep-un-hint').textContent = 'Letters, numbers and _ — this becomes the link you share.'; g('ep-un-hint').className = 'photo-hint'; }
   _epAvatarKey = undefined;   // unchanged until the user uploads or removes a photo
   _epAvatarUrl = currentProfile.avatar_url || null;
   setAvatar(document.getElementById('ep-photo'), _epAvatarUrl, curAv);
@@ -3972,6 +4345,21 @@ function removeAvatarPhoto() {
   document.getElementById('ep-photo-rm').style.display = 'none';
 }
 
+let _unTimer = null;
+function checkUsername() {
+  const inp = g('ep-un'), hint = g('ep-un-hint'); if (!inp || !hint) return;
+  const v = inp.value.trim().toLowerCase().replace(/^@/, '');
+  clearTimeout(_unTimer);
+  if (!v || v === (currentProfile?.username || '')) { hint.textContent = v ? 'This is your current link.' : 'Letters, numbers and _ — this becomes the link you share.'; hint.className = 'photo-hint'; return; }
+  hint.textContent = 'Checking…'; hint.className = 'photo-hint';
+  _unTimer = setTimeout(async function() {
+    let d; try { d = await api('GET', '/api/username?u=' + encodeURIComponent(v)); } catch (e) { return; }
+    if (inp.value.trim().toLowerCase().replace(/^@/, '') !== v) return;
+    hint.textContent = d.available ? '✓ vycheckout.com/' + d.username + ' is available' : '✗ ' + (d.reason || 'Not available');
+    hint.className = 'photo-hint ' + (d.available ? 'un-ok' : 'un-bad');
+  }, 400);
+}
+
 function closeEditProfile() {
   document.getElementById('ep-ovl').classList.remove('open');
   document.body.style.overflow = '';
@@ -3987,12 +4375,14 @@ async function saveProfile() {
 
   const body = { business_name: biz || currentProfile.business_name, bio: bio || null, avatar };
   if (_epAvatarKey !== undefined) body.avatar_key = _epAvatarKey;
+  const un = (g('ep-un')?.value || '').trim().toLowerCase().replace(/^@/, '');
+  if (un !== (currentProfile.username || '')) body.username = un || null;
   const ok = await apiToast('PATCH', '/api/me', body);
 
   if (btn) { btn.disabled = false; btn.textContent = 'Save Profile'; }
 
   if (ok) {
-    currentProfile = Object.assign({}, currentProfile, { business_name: biz, bio: bio, avatar: avatar, avatar_url: ok.avatar_url || null });
+    currentProfile = Object.assign({}, currentProfile, { business_name: biz, bio: bio, avatar: avatar, avatar_url: ok.avatar_url || null, username: ok.username || null });
     setAvatar(document.getElementById('pc-avatar'), currentProfile.avatar_url, avatar);
     if (document.getElementById('pc-biz')) document.getElementById('pc-biz').textContent = biz || currentProfile.business_name;
     if (document.getElementById('pc-bio')) document.getElementById('pc-bio').textContent = bio || '';

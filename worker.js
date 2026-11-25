@@ -276,7 +276,7 @@ var money = (minor, currency) => {
     return `${v.toFixed(zero ? 0 : 2)} ${currency}`;
   }
 };
-function payerReceiptEmail(env, { to, business, description, grossMinor, currency, txnId, method, cancelUrl: cancelUrl2, shipping }) {
+function payerReceiptEmail(env, { to, business, description, grossMinor, currency, txnId, method, cancelUrl: cancelUrl2, shipping, downloadUrl }) {
   const lines = [
     `Thanks for your payment to ${business}.`,
     "",
@@ -287,6 +287,7 @@ function payerReceiptEmail(env, { to, business, description, grossMinor, currenc
     `Date: ${(/* @__PURE__ */ new Date()).toUTCString()}`
   ];
   if (cancelUrl2) lines.push("", `This is a recurring subscription. To cancel it, open: ${cancelUrl2}`);
+  if (downloadUrl) lines.push("", `Your download: ${downloadUrl}`, "(Keep this email \u2014 the link is yours.)");
   if (shipping) lines.push("", "Delivering to:", shippingText(shipping), "", `${business} will email you a tracking number when it ships.`);
   const text = lines.join("\n");
   const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;line-height:1.55">
@@ -298,6 +299,7 @@ function payerReceiptEmail(env, { to, business, description, grossMinor, currenc
       <tr><td style="padding:3px 12px 3px 0;color:#666">Paid with</td><td>${escHtml(method)}</td></tr>
       <tr><td style="padding:3px 12px 3px 0;color:#666">Reference</td><td style="font-family:monospace;font-size:12px">${escHtml(txnId)}</td></tr>
     </table>
+    ${downloadUrl ? `<p style="margin:16px 0"><a href="${escHtml(downloadUrl)}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700">\u2B07 Download your file</a></p><p style="font-size:12px;color:#777">Keep this email \u2014 the link is yours.</p>` : ""}
     ${shipping ? `<p style="font-size:14px"><strong>Delivering to:</strong><br>${escHtml(shippingText(shipping)).replace(/\n/g, "<br>")}</p><p style="font-size:13px;color:#555">${escHtml(business)} will email you a tracking number when it ships.</p>` : ""}
     ${cancelUrl2 ? `<p style="font-size:13px;color:#555">This is a recurring subscription. <a href="${escHtml(cancelUrl2)}">Cancel it here</a> any time.</p>` : ""}
   </div>`;
@@ -370,6 +372,7 @@ function selfView(env, u) {
     bio: u.bio,
     avatar: u.avatar,
     avatar_url: mediaUrl(u.avatar_key),
+    username: u.username || null,
     ref_code: u.ref_code,
     has_referrer: !!u.referrer_id,
     created_at: u.created_at,
@@ -600,6 +603,283 @@ async function googleCallback(env, request, ctx) {
   return new Response(null, { status: 302, headers });
 }
 
+// src/extras.js
+var RESERVED = /* @__PURE__ */ new Set([
+  "api",
+  "webhooks",
+  "admin",
+  "help",
+  "faq",
+  "login",
+  "logout",
+  "signup",
+  "register",
+  "dashboard",
+  "settings",
+  "account",
+  "pay",
+  "checkout",
+  "support",
+  "about",
+  "terms",
+  "privacy",
+  "legal",
+  "docs",
+  "blog",
+  "app",
+  "www",
+  "mail",
+  "static",
+  "assets",
+  "media",
+  "files",
+  "download",
+  "downloads",
+  "index",
+  "sitemap",
+  "robots",
+  "manifest",
+  "sw",
+  "icons",
+  "og",
+  "vycheckout",
+  "explore",
+  "discover",
+  "feed",
+  "offline",
+  "home",
+  "search",
+  "new",
+  "u",
+  "p",
+  "me",
+  "shop",
+  "store",
+  "null",
+  "undefined",
+  "root",
+  "system"
+]);
+var USERNAME_RE = /^[a-z0-9](?:[a-z0-9_]{1,28}[a-z0-9])?$/;
+function cleanUsername(raw) {
+  const u = String(raw || "").trim().toLowerCase().replace(/^@/, "");
+  if (!u) return null;
+  if (u.length < 3 || u.length > 30 || !USERNAME_RE.test(u)) throw bad("Profile link: 3\u201330 letters, numbers or _ (not at the start or end)", "bad_username");
+  if (RESERVED.has(u)) throw bad("That profile link is reserved. Try another.", "username_taken");
+  return u;
+}
+async function usernameAvailable(env, request) {
+  const viewer = await requireUser(env, request);
+  const name = new URL(request.url).searchParams.get("u");
+  let u;
+  try {
+    u = cleanUsername(name);
+  } catch (e) {
+    return json({ available: false, reason: e.message });
+  }
+  if (!u) return json({ available: false, reason: "Enter a profile link" });
+  const row = await env.DB.prepare("SELECT id FROM users WHERE username = ?").bind(u).first();
+  return json({ available: !row || row.id === viewer.id, username: u, reason: row && row.id !== viewer.id ? "Already taken" : null });
+}
+var MAX_FILE = 25 * 1024 * 1024;
+var safeName = (n) => String(n || "download").replace(/[\r\n"\\/]/g, "").replace(/[^\w.\- ()&+,]/g, "_").slice(0, 120) || "download";
+async function uploadFile(env, request) {
+  const u = await requireUser(env, request);
+  if (!env.MEDIA) throw new HttpError(503, "File uploads are not set up yet.", "media_off");
+  await rateLimit(env, `files:${u.id}`, 30, 36e5);
+  const len = parseInt(request.headers.get("Content-Length") || "0", 10);
+  if (len > MAX_FILE) throw bad("That file is too large (max 25 MB).");
+  const buf = await request.arrayBuffer();
+  if (!buf.byteLength) throw bad("No file received.");
+  if (buf.byteLength > MAX_FILE) throw bad("That file is too large (max 25 MB).");
+  let name = request.headers.get("X-File-Name") || "download";
+  try {
+    name = decodeURIComponent(name);
+  } catch {
+  }
+  name = safeName(name);
+  const key = `f/${newId()}`;
+  await env.MEDIA.put(key, buf, { httpMetadata: { contentType: "application/octet-stream" } });
+  await env.DB.prepare("INSERT INTO files (key, user_id, name, content_type, bytes) VALUES (?,?,?,?,?)").bind(key, u.id, name, String(request.headers.get("Content-Type") || "").slice(0, 100) || null, buf.byteLength).run();
+  return json({ key, name, bytes: buf.byteLength });
+}
+async function ownedFile(env, userId, key) {
+  if (key === null || key === "" || key === void 0) return null;
+  if (typeof key !== "string" || !/^f\/[0-9a-f-]{36}$/.test(key)) throw bad("Invalid file");
+  const row = await env.DB.prepare("SELECT key FROM files WHERE key = ? AND user_id = ?").bind(key, userId).first();
+  if (!row) throw bad("File not found. Please upload it again.");
+  return key;
+}
+var MAX_DOWNLOADS = 20;
+async function download(env, request, token) {
+  if (!/^[A-Za-z0-9_-]{30,80}$/.test(String(token))) throw notFound("Download not found");
+  const t = await env.DB.prepare(
+    `SELECT t.id, t.status, t.downloads, i.file_key FROM transactions t JOIN items i ON i.id = t.item_id WHERE t.download_token = ?`
+  ).bind(token).first();
+  if (!t || !t.file_key) throw notFound("Download not found");
+  if (t.status === "refunded") throw forbidden("This purchase was refunded, so the download is no longer available.");
+  if (t.downloads >= MAX_DOWNLOADS) throw forbidden("This download link has been used too many times. Contact the seller for a new copy.");
+  const f = await env.DB.prepare("SELECT name FROM files WHERE key = ?").bind(t.file_key).first();
+  const obj = env.MEDIA && await env.MEDIA.get(t.file_key);
+  if (!obj || !f) throw notFound("The seller removed this file. Contact them for a copy.");
+  if (request.method !== "HEAD") await env.DB.prepare("UPDATE transactions SET downloads = downloads + 1 WHERE id = ?").bind(t.id).run();
+  return new Response(request.method === "HEAD" ? null : obj.body, {
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "Content-Disposition": `attachment; filename="${safeName(f.name)}"`,
+      "Content-Length": String(obj.size),
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; sandbox",
+      "Cache-Control": "private, no-store"
+    }
+  });
+}
+var newDownloadToken = () => randomToken(32);
+var CODE_RE = /^[A-Z0-9]{3,20}$/;
+var codeView = (d) => ({
+  id: d.id,
+  code: d.code,
+  percent: d.percent,
+  max_uses: d.max_uses,
+  uses: d.uses,
+  expires_at: d.expires_at,
+  active: !!d.active,
+  expired: !!(d.expires_at && new Date(d.expires_at) < /* @__PURE__ */ new Date()),
+  used_up: d.max_uses != null && d.uses >= d.max_uses
+});
+async function listCodes(env, request) {
+  const u = await requireUser(env, request);
+  const { results } = await env.DB.prepare("SELECT * FROM discount_codes WHERE user_id = ? ORDER BY created_at DESC").bind(u.id).all();
+  return json({ codes: results.map(codeView) });
+}
+async function createCode(env, request) {
+  const u = await requireUser(env, request);
+  await rateLimit(env, `codes:${u.id}`, 50, 36e5);
+  const b = await readJson(request);
+  const code = String(b.code || "").trim().toUpperCase();
+  if (!CODE_RE.test(code)) throw bad("Code: 3\u201320 letters or numbers, no spaces");
+  const percent = parseInt(b.percent, 10);
+  if (!(percent >= 1 && percent <= 90)) throw bad("Discount must be between 1% and 90%");
+  const max_uses = b.max_uses ? parseInt(b.max_uses, 10) : null;
+  if (max_uses != null && !(max_uses >= 1 && max_uses <= 1e5)) throw bad("Invalid usage limit");
+  const days = b.expires_days ? parseInt(b.expires_days, 10) : 0;
+  if (!(days >= 0 && days <= 365)) throw bad("Invalid expiry");
+  const expires_at = days ? new Date(Date.now() + days * 864e5).toISOString() : null;
+  const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM discount_codes WHERE user_id = ?").bind(u.id).first();
+  if (count.n >= 200) throw bad("You have too many codes. Delete some old ones first.");
+  const id = newId();
+  try {
+    await env.DB.prepare("INSERT INTO discount_codes (id, user_id, code, percent, max_uses, expires_at) VALUES (?,?,?,?,?,?)").bind(id, u.id, code, percent, max_uses, expires_at).run();
+  } catch (e) {
+    if (/UNIQUE/i.test(String(e?.message))) throw bad("You already have a code called " + code);
+    throw e;
+  }
+  return json({ code: codeView(await env.DB.prepare("SELECT * FROM discount_codes WHERE id = ?").bind(id).first()) });
+}
+async function updateCode(env, request, id) {
+  const u = await requireUser(env, request);
+  const b = await readJson(request);
+  const r = await env.DB.prepare("UPDATE discount_codes SET active = ? WHERE id = ? AND user_id = ?").bind(b.active ? 1 : 0, id, u.id).run();
+  if (!r.meta.changes) throw notFound("Code not found");
+  return json({ ok: true });
+}
+async function deleteCode(env, request, id) {
+  const u = await requireUser(env, request);
+  const r = await env.DB.prepare("DELETE FROM discount_codes WHERE id = ? AND user_id = ?").bind(id, u.id).run();
+  if (!r.meta.changes) throw notFound("Code not found");
+  return json({ ok: true });
+}
+async function findCode(env, ownerId, raw) {
+  const code = String(raw || "").trim().toUpperCase();
+  if (!code) return null;
+  const d = CODE_RE.test(code) && await env.DB.prepare("SELECT * FROM discount_codes WHERE user_id = ? AND code = ?").bind(ownerId, code).first();
+  if (!d || !d.active) throw bad("That discount code is not valid", "bad_code");
+  if (d.expires_at && new Date(d.expires_at) < /* @__PURE__ */ new Date()) throw bad("That discount code has expired", "bad_code");
+  if (d.max_uses != null && d.uses >= d.max_uses) throw bad("That discount code has been used up", "bad_code");
+  return d;
+}
+async function checkCode(env, request) {
+  const b = await readJson(request);
+  await rateLimit(env, `code-check:${request.headers.get("CF-Connecting-IP") || "local"}`, 30, 6e5);
+  const item = typeof b.item_id === "string" && await env.DB.prepare(
+    "SELECT user_id, type, custom_amount, amount_minor, currency FROM items WHERE id = ? AND deleted_at IS NULL"
+  ).bind(b.item_id.slice(0, 64)).first();
+  if (!item) throw notFound("Item not found");
+  if (item.type === "sub" || item.custom_amount) throw bad("Discount codes can\u2019t be used on this link", "bad_code");
+  const d = await findCode(env, item.user_id, b.code);
+  if (!d) throw bad("Enter a code", "bad_code");
+  return json({ code: d.code, percent: d.percent });
+}
+async function visibleItem(env, id) {
+  const i = await env.DB.prepare(
+    `SELECT i.id, i.user_id FROM items i JOIN users u ON u.id = i.user_id
+     WHERE i.id = ? AND i.type IN ('col','lnk') AND i.deleted_at IS NULL AND u.suspended = 0 AND u.deleted_at IS NULL`
+  ).bind(String(id).slice(0, 64)).first();
+  if (!i) throw notFound("Post not found");
+  return i;
+}
+async function like(env, request, itemId, on) {
+  const u = await requireUser(env, request);
+  await visibleItem(env, itemId);
+  await rateLimit(env, `like:${u.id}`, 300, 36e5);
+  if (on) await env.DB.prepare("INSERT OR IGNORE INTO likes (user_id, item_id) VALUES (?,?)").bind(u.id, itemId).run();
+  else await env.DB.prepare("DELETE FROM likes WHERE user_id = ? AND item_id = ?").bind(u.id, itemId).run();
+  const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM likes WHERE item_id = ?").bind(itemId).first();
+  return json({ liked: on, likes: n.n });
+}
+var commentView = (c, viewerId, ownerId) => ({
+  id: c.id,
+  body: c.body,
+  created_at: c.created_at,
+  user: { id: c.user_id, name: c.business_name || c.full_name || "User", avatar: c.avatar, avatar_url: mediaUrl(c.avatar_key), ref_code: c.ref_code, username: c.username },
+  can_delete: !!viewerId && (viewerId === c.user_id || viewerId === ownerId)
+});
+async function listComments(env, request, itemId) {
+  const item = await visibleItem(env, itemId);
+  const viewer = await getSessionUser(env, request);
+  const { results } = await env.DB.prepare(
+    `SELECT c.*, u.business_name, u.full_name, u.avatar, u.avatar_key, u.ref_code, u.username FROM comments c JOIN users u ON u.id = c.user_id
+     WHERE c.item_id = ? AND c.deleted_at IS NULL AND u.suspended = 0 AND u.deleted_at IS NULL ORDER BY c.created_at ASC LIMIT 200`
+  ).bind(itemId).all();
+  return json({ comments: results.map((c) => commentView(c, viewer?.id, item.user_id)) });
+}
+async function addComment(env, request, itemId) {
+  const u = await requireUser(env, request);
+  const item = await visibleItem(env, itemId);
+  await rateLimit(env, `comment:${u.id}`, 30, 36e5);
+  const b = await readJson(request);
+  const body = str(b.body, { max: 300, required: true, field: "Comment" });
+  const id = newId();
+  await env.DB.prepare("INSERT INTO comments (id, item_id, user_id, body) VALUES (?,?,?,?)").bind(id, itemId, u.id, body).run();
+  const c = await env.DB.prepare(
+    `SELECT c.*, u.business_name, u.full_name, u.avatar, u.avatar_key, u.ref_code, u.username FROM comments c JOIN users u ON u.id = c.user_id WHERE c.id = ?`
+  ).bind(id).first();
+  return json({ comment: commentView(c, u.id, item.user_id) });
+}
+async function deleteComment(env, request, id) {
+  const u = await requireUser(env, request);
+  const r = await env.DB.prepare(
+    `UPDATE comments SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL
+       AND (user_id = ? OR item_id IN (SELECT id FROM items WHERE user_id = ?))`
+  ).bind(nowIso(), String(id).slice(0, 64), u.id, u.id).run();
+  if (!r.meta.changes) throw notFound("Comment not found");
+  return json({ ok: true });
+}
+async function socialCounts(env, items, viewerId) {
+  if (!items.length) return items;
+  const ids = items.map((i) => i.id);
+  const qs = ids.map(() => "?").join(",");
+  const [likes, comments, mine] = await env.DB.batch([
+    env.DB.prepare(`SELECT item_id, COUNT(*) AS n FROM likes WHERE item_id IN (${qs}) GROUP BY item_id`).bind(...ids),
+    env.DB.prepare(`SELECT item_id, COUNT(*) AS n FROM comments WHERE item_id IN (${qs}) AND deleted_at IS NULL GROUP BY item_id`).bind(...ids),
+    env.DB.prepare(`SELECT item_id FROM likes WHERE user_id = ? AND item_id IN (${qs})`).bind(viewerId || "", ...ids)
+  ]);
+  const L = Object.fromEntries(likes.results.map((r) => [r.item_id, r.n]));
+  const C = Object.fromEntries(comments.results.map((r) => [r.item_id, r.n]));
+  const M = new Set(mine.results.map((r) => r.item_id));
+  return items.map((i) => ({ ...i, likes: L[i.id] || 0, comments: C[i.id] || 0, liked: M.has(i.id) }));
+}
+
 // src/webhooks.js
 var MAX_ATTEMPTS = 6;
 var BACKOFF_MIN = [1, 5, 30, 120, 360, 720];
@@ -688,8 +968,17 @@ async function newOrder(env, request, provider) {
   await guardPayer(env, request);
   const item = await payableItem(env, b.item_id);
   if (item.type === "sub") throw bad("Subscriptions use the subscribe button", "use_subscription");
-  const itemAmount = priceFor(env, item, b.amount);
+  let itemAmount = priceFor(env, item, b.amount);
   if (itemAmount <= 0) throw bad("Invalid amount");
+  let discount = null, discountMinor = 0;
+  if (b.discount_code && !item.custom_amount) {
+    discount = await findCode(env, item.user_id, b.discount_code);
+    if (discount) {
+      discountMinor = Math.round(itemAmount * discount.percent / 100);
+      if (itemAmount - discountMinor < minPaymentMinor(env, item.currency)) throw bad("This code would bring the price below the minimum payment.", "bad_code");
+      itemAmount -= discountMinor;
+    }
+  }
   const ship = item.ship_required ? cleanShipping(b.shipping) : null;
   const shipFee = ship ? item.ship_fee_minor || 0 : 0;
   const amount = itemAmount + shipFee;
@@ -697,8 +986,22 @@ async function newOrder(env, request, provider) {
   const payer_email = b.payer_email ? emailOf(b.payer_email) : null;
   const payer_note = str(b.payer_note, { max: 300, field: "Message" }) || null;
   const ship_json = ship ? JSON.stringify(ship) : null;
-  const order = { id: newId(), item_id: item.id, owner_id: item.user_id, provider, amount_minor: amount, currency: item.currency, payer_name, payer_email, payer_note, ship_json, ship_fee_minor: shipFee };
-  await env.DB.prepare("INSERT INTO orders (id, item_id, owner_id, provider, amount_minor, currency, payer_name, payer_email, payer_note, ship_json, ship_fee_minor) VALUES (?,?,?,?,?,?,?,?,?,?,?)").bind(order.id, order.item_id, order.owner_id, provider, amount, item.currency, payer_name, payer_email, payer_note, ship_json, shipFee).run();
+  const order = {
+    id: newId(),
+    item_id: item.id,
+    owner_id: item.user_id,
+    provider,
+    amount_minor: amount,
+    currency: item.currency,
+    payer_name,
+    payer_email,
+    payer_note,
+    ship_json,
+    ship_fee_minor: shipFee,
+    discount_id: discount?.id || null,
+    discount_minor: discountMinor
+  };
+  await env.DB.prepare("INSERT INTO orders (id, item_id, owner_id, provider, amount_minor, currency, payer_name, payer_email, payer_note, ship_json, ship_fee_minor, discount_id, discount_minor) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(order.id, order.item_id, order.owner_id, provider, amount, item.currency, payer_name, payer_email, payer_note, ship_json, shipFee, order.discount_id, discountMinor).run();
   return { order, item, body: b };
 }
 async function recordPayment(env, ctx, order, p) {
@@ -712,7 +1015,8 @@ async function recordPayment(env, ctx, order, p) {
     ]));
     throw new HttpError(409, "Payment amount did not match the order. It has been flagged for review.", "amount_mismatch");
   }
-  const item = await env.DB.prepare("SELECT id, type, name FROM items WHERE id = ?").bind(order.item_id).first();
+  const item = await env.DB.prepare("SELECT id, type, name, file_key FROM items WHERE id = ?").bind(order.item_id).first();
+  const downloadToken = item?.file_key ? newDownloadToken() : null;
   const owner = await env.DB.prepare("SELECT id, email, referrer_id, notify_sales, business_name, full_name FROM users WHERE id = ?").bind(order.owner_id).first();
   const gross = p.grossMinor;
   const fee = Math.round(gross * feeBps(env) / 1e4);
@@ -730,8 +1034,8 @@ async function recordPayment(env, ctx, order, p) {
       `INSERT OR IGNORE INTO transactions
         (id, owner_id, item_id, item_type, order_id, provider, provider_ref, description, payer_name, payer_email, payer_note,
          currency, gross_minor, fee_minor, net_minor, referrer_id, referral_minor, subscription_id,
-         ship_json, ship_fee_minor, ship_status)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         ship_json, ship_fee_minor, ship_status, download_token, discount_code, discount_minor)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,(SELECT code FROM discount_codes WHERE id = ?),?)`
     ).bind(
       txnId,
       order.owner_id,
@@ -753,11 +1057,15 @@ async function recordPayment(env, ctx, order, p) {
       p.subscriptionId || null,
       order.ship_json || null,
       order.ship_fee_minor || 0,
-      order.ship_json ? "to_ship" : null
+      order.ship_json ? "to_ship" : null,
+      downloadToken,
+      order.discount_id || null,
+      order.discount_minor || 0
     ),
     env.DB.prepare(`INSERT INTO ledger (id, user_id, currency, amount_minor, kind, txn_id, available_at) SELECT ?,?,?,?,'sale',?,? ${onlyIfNew}`).bind(newId(), order.owner_id, order.currency, net, txnId, ownerAvail, txnId)
   ];
   if (order.id) stmts.push(env.DB.prepare("UPDATE orders SET status = 'paid' WHERE id = ?").bind(order.id));
+  if (order.discount_id) stmts.push(env.DB.prepare(`UPDATE discount_codes SET uses = uses + 1 WHERE id = ? AND EXISTS (SELECT 1 FROM transactions WHERE id = ?)`).bind(order.discount_id, txnId));
   if (referrer && refAmt > 0) {
     stmts.push(env.DB.prepare(`INSERT INTO ledger (id, user_id, currency, amount_minor, kind, txn_id, available_at) SELECT ?,?,?,?,'referral',?,? ${onlyIfNew}`).bind(newId(), referrer, order.currency, refAmt, txnId, refAvail, txnId));
   }
@@ -792,7 +1100,8 @@ async function recordPayment(env, ctx, order, p) {
       txnId: txn.id,
       method,
       cancelUrl: p.cancelUrl,
-      shipping: txn.ship_json ? JSON.parse(txn.ship_json) : null
+      shipping: txn.ship_json ? JSON.parse(txn.ship_json) : null,
+      downloadUrl: txn.download_token ? `${base2}/api/download/${txn.download_token}` : null
     }));
     if (owner?.notify_sales && owner.email) ctx.waitUntil(saleAlertEmail(env, {
       to: owner.email,
@@ -865,7 +1174,8 @@ async function receiptView(env, txn) {
     description: txn.description,
     business: owner?.business_name || owner?.full_name || "VyCheckout",
     method: txn.provider === "paypal" ? "PayPal" : "Card",
-    created_at: txn.created_at
+    created_at: txn.created_at,
+    download_url: txn.download_token ? `${(env.APP_URL || "").replace(/\/$/, "")}/api/download/${txn.download_token}` : null
   };
 }
 var ppBase = (env) => env.PAYPAL_API_BASE || (env.PAYPAL_ENV === "sandbox" ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com");
@@ -1520,7 +1830,8 @@ var itemView = (i) => ({
   expired: !!(i.expires_at && new Date(i.expires_at) < /* @__PURE__ */ new Date()),
   image: mediaUrl(i.image_key),
   ship_required: !!i.ship_required,
-  ship_fee: toMajor(i.ship_fee_minor || 0, i.currency)
+  ship_fee: toMajor(i.ship_fee_minor || 0, i.currency),
+  has_file: !!i.file_key
 });
 var txnView = (t) => ({
   id: t.id,
@@ -1536,6 +1847,9 @@ var txnView = (t) => ({
   ship_carrier: t.ship_carrier,
   ship_tracking: t.ship_tracking,
   shipped_at: t.shipped_at,
+  discount_code: t.discount_code || null,
+  discount_amount: toMajor(t.discount_minor || 0, t.currency),
+  has_download: !!t.download_token,
   currency: t.currency,
   gross_amount: toMajor(t.gross_minor, t.currency),
   fee_amount: toMajor(t.fee_minor, t.currency),
@@ -1628,8 +1942,14 @@ async function updateProfile(env, request) {
   const bio = str(b.bio, { max: 300, field: "Bio" }) || null;
   const avatar = str(b.avatar, { max: 16, field: "Avatar" }) || null;
   const avatar_key = b.avatar_key === void 0 ? u.avatar_key || null : await ownedKey(env, u.id, b.avatar_key, "avatar");
-  await env.DB.prepare("UPDATE users SET business_name = ?, bio = ?, avatar = ?, avatar_key = ? WHERE id = ?").bind(business_name, bio, avatar, avatar_key, u.id).run();
-  return json({ ok: true, avatar_url: mediaUrl(avatar_key) });
+  const username = b.username === void 0 ? u.username || null : cleanUsername(b.username);
+  try {
+    await env.DB.prepare("UPDATE users SET business_name = ?, bio = ?, avatar = ?, avatar_key = ?, username = ? WHERE id = ?").bind(business_name, bio, avatar, avatar_key, username, u.id).run();
+  } catch (e) {
+    if (/UNIQUE/i.test(String(e?.message))) throw bad("That profile link is already taken. Try another.", "username_taken");
+    throw e;
+  }
+  return json({ ok: true, avatar_url: mediaUrl(avatar_key), username });
 }
 async function createItemFor(env, userId, b, source) {
   await rateLimit(env, `items:${userId}`, 100, 36e5);
@@ -1653,6 +1973,7 @@ async function createItemFor(env, userId, b, source) {
   const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM items WHERE user_id = ? AND deleted_at IS NULL").bind(userId).first();
   if (count.n >= MAX_ITEMS_PER_USER) throw bad("You have reached the item limit. Delete some old items first.");
   const image_key = b.image_key ? await ownedKey(env, userId, b.image_key, "post") : null;
+  const file_key = b.file_key && type !== "sub" ? await ownedFile(env, userId, b.file_key) : null;
   const ship_required = !!b.ship_required && type !== "sub";
   let ship_fee = 0;
   if (ship_required && b.ship_fee) {
@@ -1661,8 +1982,8 @@ async function createItemFor(env, userId, b, source) {
   }
   const id = newId();
   await env.DB.prepare(
-    `INSERT INTO items (id, user_id, type, name, description, note, amount_minor, currency, cycle, custom_amount, expires_at, source, image_key, ship_required, ship_fee_minor)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO items (id, user_id, type, name, description, note, amount_minor, currency, cycle, custom_amount, expires_at, source, image_key, ship_required, ship_fee_minor, file_key)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id,
     userId,
@@ -1678,7 +1999,8 @@ async function createItemFor(env, userId, b, source) {
     source,
     image_key,
     ship_required ? 1 : 0,
-    ship_fee
+    ship_fee,
+    file_key
   ).run();
   return env.DB.prepare("SELECT * FROM items WHERE id = ?").bind(id).first();
 }
@@ -1810,10 +2132,11 @@ var ownerView = (r) => ({
   business_name: r.owner_business || r.owner_name || "User",
   avatar: r.owner_avatar,
   avatar_url: mediaUrl(r.owner_avatar_key),
-  ref_code: r.owner_ref
+  ref_code: r.owner_ref,
+  username: r.owner_username || null
 });
 var OWNER_COLS = `o.business_name AS owner_business, o.full_name AS owner_name, o.avatar AS owner_avatar,
-  o.avatar_key AS owner_avatar_key, o.ref_code AS owner_ref`;
+  o.avatar_key AS owner_avatar_key, o.ref_code AS owner_ref, o.username AS owner_username`;
 var postView = (r) => ({ ...itemView(r), source: void 0, note: void 0, owner: ownerView(r) });
 var PAGE = 20;
 async function feed(env, request) {
@@ -1829,7 +2152,7 @@ async function feed(env, request) {
        ORDER BY i.created_at DESC LIMIT ?`
     ).bind(u.id, before, nowIso(), PAGE)
   ]);
-  const items = rows.results.map(postView);
+  const items = await socialCounts(env, rows.results.map(postView), u.id);
   return json({
     following_count: following.results[0].n,
     items,
@@ -1852,7 +2175,7 @@ async function explore(env, request) {
      ) WHERE rn <= 2
      ORDER BY sales DESC, created_at DESC LIMIT ?3 OFFSET ?4`
   ).bind(since, viewer?.id || "", PAGE, page2 * PAGE).all();
-  return json({ items: results.map(postView), next: results.length === PAGE ? page2 + 1 : null });
+  return json({ items: await socialCounts(env, results.map(postView), viewer?.id), next: results.length === PAGE ? page2 + 1 : null });
 }
 async function suggested(env, request) {
   const viewer = await getSessionUser(env, request);
@@ -1871,7 +2194,7 @@ async function suggested(env, request) {
 }
 async function publicItem(env, request, id) {
   const i = await env.DB.prepare(
-    `SELECT i.*, u.business_name, u.full_name, u.avatar, u.avatar_key, u.ref_code FROM items i JOIN users u ON u.id = i.user_id
+    `SELECT i.*, u.business_name, u.full_name, u.avatar, u.avatar_key, u.ref_code, u.username FROM items i JOIN users u ON u.id = i.user_id
      WHERE i.id = ? AND i.deleted_at IS NULL AND u.suspended = 0 AND u.deleted_at IS NULL`
   ).bind(String(id).slice(0, 64)).first();
   if (!i) throw notFound("This link may have been removed.");
@@ -1890,6 +2213,7 @@ async function publicItem(env, request, id) {
       avatar: i.avatar,
       avatar_url: mediaUrl(i.avatar_key),
       ref_code: i.ref_code,
+      username: i.username || null,
       followers: followers.results[0].n,
       is_following: !!isFollowing.results[0].n,
       is_me: viewer?.id === i.user_id
@@ -1898,8 +2222,9 @@ async function publicItem(env, request, id) {
 }
 async function publicProfile(env, request, code) {
   const p = await env.DB.prepare(
-    "SELECT id, full_name, business_name, avatar, avatar_key, bio, ref_code FROM users WHERE ref_code = ? AND deleted_at IS NULL AND suspended = 0"
-  ).bind(String(code).toUpperCase().slice(0, 12)).first();
+    `SELECT id, full_name, business_name, avatar, avatar_key, bio, ref_code, username FROM users
+     WHERE (ref_code = ?1 OR username = ?2) AND deleted_at IS NULL AND suspended = 0 LIMIT 1`
+  ).bind(String(code).toUpperCase().slice(0, 12), String(code).toLowerCase().slice(0, 30)).first();
   if (!p) throw notFound("Profile not found");
   const viewer = await getSessionUser(env, request);
   const q = (sql, ...a) => env.DB.prepare(sql).bind(...a);
@@ -2131,7 +2456,10 @@ async function deleteAccount(env, request, ctx) {
     env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(u.id),
     env.DB.prepare("UPDATE api_keys SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL").bind(now, u.id),
     env.DB.prepare("UPDATE items SET deleted_at = ? WHERE user_id = ? AND deleted_at IS NULL").bind(now, u.id),
-    env.DB.prepare("DELETE FROM follows WHERE follower_id = ? OR following_id = ?").bind(u.id, u.id)
+    env.DB.prepare("DELETE FROM follows WHERE follower_id = ? OR following_id = ?").bind(u.id, u.id),
+    env.DB.prepare("DELETE FROM likes WHERE user_id = ?").bind(u.id),
+    env.DB.prepare("UPDATE comments SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE user_id = ? AND deleted_at IS NULL").bind(u.id),
+    env.DB.prepare("UPDATE users SET username = NULL WHERE id = ?").bind(u.id)
   ]);
   await audit(env, u.id, "account_self_delete", u.id);
   return json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
@@ -2270,7 +2598,10 @@ async function deleteUser(env, request, id) {
     env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id),
     env.DB.prepare("UPDATE api_keys SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL").bind(now, id),
     env.DB.prepare("UPDATE items SET deleted_at = ? WHERE user_id = ? AND deleted_at IS NULL").bind(now, id),
-    env.DB.prepare("DELETE FROM follows WHERE follower_id = ? OR following_id = ?").bind(id, id)
+    env.DB.prepare("DELETE FROM follows WHERE follower_id = ? OR following_id = ?").bind(id, id),
+    env.DB.prepare("DELETE FROM likes WHERE user_id = ?").bind(id),
+    env.DB.prepare("UPDATE comments SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE user_id = ? AND deleted_at IS NULL").bind(id),
+    env.DB.prepare("UPDATE users SET username = NULL WHERE id = ?").bind(id)
   ]);
   await audit(env, admin.id, "user_delete", id);
   return json({ ok: true });
@@ -2346,6 +2677,8 @@ var clip = (s, n) => {
 };
 var CYCLE = { WEEKLY: "week", MONTHLY: "month", QUARTERLY: "quarter", ANNUALLY: "year" };
 var base = (env, url) => (env.APP_URL || url.origin).replace(/\/$/, "");
+var PAGE_PATH = /^\/[A-Za-z0-9_]{3,30}\/?$/;
+var profileUrl = (b, p) => p.username ? `${b}/${p.username}` : `${b}/?u=${p.ref_code}`;
 var HOME = {
   title: "VyCheckout \u2014 Payment Links for Creators",
   description: "Create a payment link in minutes and get paid by card or PayPal. Collections, subscriptions, pay links and a 1% referral programme. Free to join, no monthly fees."
@@ -2353,7 +2686,17 @@ var HOME = {
 async function metaFor(env, url) {
   const b = base(env, url);
   const pay = url.searchParams.get("pay");
-  const u = url.searchParams.get("u");
+  const path = url.pathname.replace(/\/$/, "").slice(1).toLowerCase();
+  if (path === "help") return {
+    title: "Help & FAQ | VyCheckout",
+    image: b + "/og.png",
+    bigImage: true,
+    url: b + "/help",
+    type: "website",
+    description: "How VyCheckout works: fees, payment hold, withdrawals, refunds, shipping, digital downloads, discount codes and referrals."
+  };
+  const byName = path && path !== "index.html" ? path : null;
+  const u = url.searchParams.get("u") || byName;
   if (pay) {
     const [type, id] = pay.split(":");
     if (["col", "sub", "lnk"].includes(type) && id && id.length <= 64) {
@@ -2386,11 +2729,11 @@ async function metaFor(env, url) {
   }
   if (u) {
     const code = String(u).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
-    const p = code && await env.DB.prepare(
-      `SELECT id, full_name, business_name, bio, avatar_key, ref_code,
+    const p = await env.DB.prepare(
+      `SELECT id, full_name, business_name, bio, avatar_key, ref_code, username,
          (SELECT COUNT(*) FROM items WHERE user_id = users.id AND type = 'col' AND deleted_at IS NULL) AS posts
-       FROM users WHERE ref_code = ? AND deleted_at IS NULL AND suspended = 0`
-    ).bind(code).first();
+       FROM users WHERE (ref_code = ?1 OR username = ?2) AND deleted_at IS NULL AND suspended = 0 LIMIT 1`
+    ).bind(code, String(u).toLowerCase().slice(0, 30)).first();
     if (p) {
       const name = p.business_name || p.full_name || "VyCheckout seller";
       const img = mediaUrl(p.avatar_key);
@@ -2399,7 +2742,7 @@ async function metaFor(env, url) {
         description: clip(p.bio ? `${p.bio} \u2014 Shop and pay ${name} on VyCheckout.` : `Shop and pay ${name} by card or PayPal on VyCheckout.`, 200),
         image: img ? b + img : b + "/og.png",
         bigImage: false,
-        url: `${b}/?u=${p.ref_code}`,
+        url: profileUrl(b, p),
         type: "profile",
         noindex: !p.posts
         // empty profiles add nothing to search
@@ -2486,7 +2829,7 @@ async function sitemap(env, request) {
          AND u.suspended = 0 AND u.deleted_at IS NULL ORDER BY i.created_at DESC LIMIT 20000`
     ).bind(now),
     env.DB.prepare(
-      `SELECT u.ref_code, MAX(i.created_at) AS updated FROM users u JOIN items i ON i.user_id = u.id
+      `SELECT u.ref_code, u.username, MAX(i.created_at) AS updated FROM users u JOIN items i ON i.user_id = u.id
        WHERE i.type = 'col' AND i.deleted_at IS NULL AND u.suspended = 0 AND u.deleted_at IS NULL
        GROUP BY u.id ORDER BY updated DESC LIMIT 20000`
     )
@@ -2494,7 +2837,8 @@ async function sitemap(env, request) {
   const url = (loc, mod, pri) => `<url><loc>${esc(loc)}</loc>${mod ? `<lastmod>${esc(mod.slice(0, 10))}</lastmod>` : ""}<priority>${pri}</priority></url>`;
   const body = [
     url(b + "/", null, "1.0"),
-    ...profiles.results.map((p) => url(`${b}/?u=${p.ref_code}`, p.updated, "0.7")),
+    url(b + "/help", null, "0.5"),
+    ...profiles.results.map((p) => url(profileUrl(b, p), p.updated, "0.7")),
     ...items.results.map((i) => url(`${b}/?pay=${i.type}:${i.id}`, i.created_at, "0.6"))
   ].join("\n");
   return new Response(`<?xml version="1.0" encoding="UTF-8"?>
@@ -2589,6 +2933,7 @@ async function route(request, env, ctx) {
   if (m === "GET" && p === "/api/auth/google/callback") return googleCallback(env, request, ctx);
   if (m === "GET" && p === "/api/auth/verify") return verifyEmail(env, request);
   if ((m === "GET" || m === "HEAD") && p.startsWith("/api/media/")) return serve(env, request, p.slice("/api/media/".length));
+  if ((m === "GET" || m === "HEAD") && p.startsWith("/api/download/")) return download(env, request, p.slice("/api/download/".length));
   if (m !== "GET" && m !== "HEAD") checkCsrf(request, env);
   switch (`${m} ${p}`) {
     case "GET /api/config":
@@ -2609,6 +2954,16 @@ async function route(request, env, ctx) {
       return suggested(env, request);
     case "POST /api/media":
       return upload(env, request);
+    case "POST /api/files":
+      return uploadFile(env, request);
+    case "GET /api/username":
+      return usernameAvailable(env, request);
+    case "GET /api/codes":
+      return listCodes(env, request);
+    case "POST /api/codes":
+      return createCode(env, request);
+    case "POST /api/public/discount":
+      return checkCode(env, request);
     case "POST /api/auth/signup":
       return signup(env, request, ctx);
     case "POST /api/auth/login":
@@ -2676,6 +3031,12 @@ async function route(request, env, ctx) {
     if (res === "items" && m === "DELETE" && seg.length === 3) return deleteItem(env, request, rid);
     if (res === "subscriptions" && m === "POST" && seg[3] === "cancel") return merchantCancel(env, request, rid);
     if (res === "transactions" && m === "POST" && seg[3] === "ship") return markShipped(env, request, rid, ctx);
+    if (res === "codes" && seg.length === 3 && m === "PATCH") return updateCode(env, request, rid);
+    if (res === "codes" && seg.length === 3 && m === "DELETE") return deleteCode(env, request, rid);
+    if (res === "items" && seg[3] === "like" && (m === "POST" || m === "DELETE")) return like(env, request, rid, m === "POST");
+    if (res === "items" && seg[3] === "comments" && m === "GET") return listComments(env, request, rid);
+    if (res === "items" && seg[3] === "comments" && m === "POST") return addComment(env, request, rid);
+    if (res === "comments" && seg.length === 3 && m === "DELETE") return deleteComment(env, request, rid);
     if (res === "follows" && seg.length === 3 && (m === "POST" || m === "DELETE")) return follow(env, request, rid, m === "POST");
     if (res === "public" && m === "GET" && rid === "items" && seg[3]) return publicItem(env, request, seg[3]);
     if (res === "public" && m === "GET" && rid === "profiles" && seg[3]) return publicProfile(env, request, seg[3]);
@@ -2698,7 +3059,8 @@ var index_default = {
     const p = new URL(request.url).pathname;
     if (request.method === "GET" || request.method === "HEAD") {
       try {
-        if (p === "/" || p === "/index.html") return await page(env, request);
+        if (p === "/offline") return env.ASSETS.fetch(request);
+        if (p === "/" || p === "/index.html" || PAGE_PATH.test(p)) return await page(env, request);
         if (p === "/robots.txt") return robots(env, request);
         if (p === "/sitemap.xml") return await sitemap(env, request);
       } catch (e) {
