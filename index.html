@@ -1532,7 +1532,7 @@ async function renderUserDash() {
         <button class="ba" id="bk-wd-btn" onclick="submitWd('bank')">Request Bank Transfer</button>
       </div>
       <div class="mt2 sh2"><h3>Withdrawal History</h3></div>
-      <div class="tw"><table><thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Destination</th><th>Status</th><th>Note</th></tr></thead><tbody id="wd-hist"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Method</th><th>Destination</th><th>Note</th></tr></thead><tbody id="wd-hist"></tbody></table></div>
     </div>
     <!-- REFERRALS -->
     <div class="panel" id="p-ref">
@@ -2221,12 +2221,15 @@ function renderWdPanel(wds, balances, held, nextRelease, holdDays) {
   if (!tb) return;
   if (!wds.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--ink3)">No withdrawals yet</td></tr>'; return; }
   tb.innerHTML = wds.map(w => `<tr>
-    <td>${fd(w.created_at)}</td><td>${fmtAmt(w.amount, w.currency)}</td><td>${esc(w.method || '')}</td>
+    <td>${fd(w.created_at)}</td><td>${fmtAmt(w.amount, w.currency)}</td>
+    <td><span class="pill ${w.status === 'completed' ? 'pg' : w.status === 'rejected' ? 'pr' : w.status === 'approved' ? 'pb' : 'pgo'}">${esc(WD_STATUS[w.status] || w.status)}</span></td>
+    <td>${esc(w.method || '')}</td>
     <td style="font-size:.73rem;color:var(--ink2)">${esc(w.destination || '')}</td>
-    <td><span class="pill ${w.status === 'completed' ? 'pg' : w.status === 'rejected' ? 'pr' : w.status === 'approved' ? 'pb' : 'pgo'}">${esc(w.status)}</span></td>
     <td style="font-size:.73rem;color:var(--ink2)">${esc(w.admin_note || w.notes || '')}</td>
   </tr>`).join('');
 }
+
+const WD_STATUS = { pending: 'Pending review', approved: 'Approved — sending', completed: 'Paid', rejected: 'Rejected (refunded to balance)' };
 
 function onWdCur() {
   const cur = g('wd-cur')?.value || 'USD';

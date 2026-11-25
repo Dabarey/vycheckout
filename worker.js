@@ -2088,9 +2088,10 @@ async function updateWithdrawal(env, request, id, ctx) {
   const w = await env.DB.prepare("SELECT w.*, u.email FROM withdrawals w JOIN users u ON u.id = w.user_id WHERE w.id = ?").bind(id).first();
   if (w?.email) {
     const what = { approved: "was approved and will be sent soon", rejected: "was rejected and the money is back in your balance", completed: "has been paid" }[b.status];
+    const subject = { approved: "Your withdrawal was approved", rejected: "Your withdrawal was rejected", completed: "Your withdrawal has been paid" }[b.status];
     ctx.waitUntil(sendEmail(env, {
       to: w.email,
-      subject: `Your withdrawal ${what.split(" ").slice(0, 2).join(" ")}`,
+      subject: `${subject}: ${money(w.amount_minor, w.currency)}`,
       text: `Your withdrawal of ${money(w.amount_minor, w.currency)} ${what}.${note ? `
 Note: ${note}` : ""}`
     }));
