@@ -55,6 +55,6 @@
     "HOLD_DAYS": "7",
     "NEW_ACCOUNT_HOLD_DAYS": "14",
     "NEW_ACCOUNT_DAYS": "30",
-    "TURNSTILE_SITE_KEY": ""
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAGSoLdQnMghQQryJ"
   }
 }
