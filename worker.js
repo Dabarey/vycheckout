@@ -285,10 +285,11 @@ function payerReceiptEmail(env, { to, business, description, grossMinor, currenc
   </div>`;
   return sendEmail(env, { to, subject: `Receipt: ${money(grossMinor, currency)} to ${business}`, text, html });
 }
-function saleAlertEmail(env, { to, description, grossMinor, netMinor, currency, availableAt, payerName, appUrl: appUrl2 }) {
+function saleAlertEmail(env, { to, description, grossMinor, netMinor, currency, availableAt, payerName, payerEmail, payerNote, appUrl: appUrl2 }) {
   const when = availableAt ? new Date(availableAt).toDateString() : "now";
   const lines = [
-    `You received ${money(grossMinor, currency)} for ${description || "a payment"}${payerName ? ` from ${payerName}` : ""}.`,
+    `You received ${money(grossMinor, currency)} for ${description || "a payment"}${payerName ? ` from ${payerName}` : ""}${payerEmail ? ` (${payerEmail})` : ""}.`,
+    ...payerNote ? [`Their message: "${payerNote}"`] : [],
     `After the platform fee you get ${money(netMinor, currency)}, available to withdraw: ${when}.`,
     "",
     `Dashboard: ${appUrl2}`,
@@ -298,7 +299,7 @@ function saleAlertEmail(env, { to, description, grossMinor, netMinor, currency, 
     to,
     subject: `\u{1F4B0} You got paid ${money(grossMinor, currency)}`,
     text: lines.join("\n"),
-    html: `<div style="font-family:system-ui,sans-serif;max-width:480px;line-height:1.55"><p>${lines.slice(0, 2).map(escHtml).join("<br>")}</p>
+    html: `<div style="font-family:system-ui,sans-serif;max-width:480px;line-height:1.55"><p>${lines.slice(0, lines.indexOf("")).map(escHtml).join("<br>")}</p>
       <p><a href="${escHtml(appUrl2)}">Open your dashboard</a></p><p style="font-size:12px;color:#777">You can turn these emails off in Account settings.</p></div>`
   });
 }
@@ -655,8 +656,11 @@ async function newOrder(env, request, provider) {
   if (item.type === "sub") throw bad("Subscriptions use the subscribe button", "use_subscription");
   const amount = priceFor(env, item, b.amount);
   if (amount <= 0) throw bad("Invalid amount");
-  const order = { id: newId(), item_id: item.id, owner_id: item.user_id, provider, amount_minor: amount, currency: item.currency };
-  await env.DB.prepare("INSERT INTO orders (id, item_id, owner_id, provider, amount_minor, currency) VALUES (?,?,?,?,?,?)").bind(order.id, order.item_id, order.owner_id, provider, amount, item.currency).run();
+  const payer_name = str(b.payer_name, { max: 120, field: "Your name" }) || null;
+  const payer_email = b.payer_email ? emailOf(b.payer_email) : null;
+  const payer_note = str(b.payer_note, { max: 300, field: "Message" }) || null;
+  const order = { id: newId(), item_id: item.id, owner_id: item.user_id, provider, amount_minor: amount, currency: item.currency, payer_name, payer_email, payer_note };
+  await env.DB.prepare("INSERT INTO orders (id, item_id, owner_id, provider, amount_minor, currency, payer_name, payer_email, payer_note) VALUES (?,?,?,?,?,?,?,?,?)").bind(order.id, order.item_id, order.owner_id, provider, amount, item.currency, payer_name, payer_email, payer_note).run();
   return { order, item, body: b };
 }
 async function recordPayment(env, ctx, order, p) {
@@ -679,14 +683,16 @@ async function recordPayment(env, ctx, order, p) {
   const refAmt = referrer ? Math.round(gross * refBps(env) / 1e4) : 0;
   const ownerAvail = await availableAtFor(env, order.owner_id);
   const refAvail = referrer ? await availableAtFor(env, referrer) : null;
+  const payerName = order.payer_name || p.payerName || "";
+  const payerEmail = order.payer_email || p.payerEmail || "";
   const txnId = newId();
   const onlyIfNew = "WHERE EXISTS (SELECT 1 FROM transactions WHERE id = ?)";
   const stmts = [
     env.DB.prepare(
       `INSERT OR IGNORE INTO transactions
-        (id, owner_id, item_id, item_type, order_id, provider, provider_ref, description, payer_name, payer_email,
+        (id, owner_id, item_id, item_type, order_id, provider, provider_ref, description, payer_name, payer_email, payer_note,
          currency, gross_minor, fee_minor, net_minor, referrer_id, referral_minor, subscription_id)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       txnId,
       order.owner_id,
@@ -696,8 +702,9 @@ async function recordPayment(env, ctx, order, p) {
       p.provider,
       p.providerRef,
       item?.name || null,
-      (p.payerName || "").slice(0, 120) || null,
-      (p.payerEmail || "").slice(0, 254) || null,
+      payerName.slice(0, 120) || null,
+      payerEmail.slice(0, 254) || null,
+      order.payer_note || null,
       order.currency,
       gross,
       fee,
@@ -726,6 +733,7 @@ async function recordPayment(env, ctx, order, p) {
       net_amount: toMajor(net, txn.currency),
       currency: txn.currency,
       payer_name: txn.payer_name,
+      payer_note: txn.payer_note,
       payment_method: method,
       subscription_id: txn.subscription_id,
       created_at: txn.created_at
@@ -749,6 +757,8 @@ async function recordPayment(env, ctx, order, p) {
       currency: txn.currency,
       availableAt: ownerAvail,
       payerName: txn.payer_name,
+      payerEmail: txn.payer_email,
+      payerNote: txn.payer_note,
       appUrl: base || "your dashboard"
     }));
   }
@@ -1470,6 +1480,8 @@ var txnView = (t) => ({
   item_type: t.item_type,
   description: t.description,
   payer_name: t.payer_name,
+  payer_email: t.payer_email,
+  payer_note: t.payer_note,
   currency: t.currency,
   gross_amount: toMajor(t.gross_minor, t.currency),
   fee_amount: toMajor(t.fee_minor, t.currency),
@@ -1776,11 +1788,16 @@ async function suggested(env, request) {
 }
 async function publicItem(env, request, id) {
   const i = await env.DB.prepare(
-    `SELECT i.*, u.business_name, u.full_name FROM items i JOIN users u ON u.id = i.user_id
+    `SELECT i.*, u.business_name, u.full_name, u.avatar, u.avatar_key, u.ref_code, u.created_at AS seller_since FROM items i JOIN users u ON u.id = i.user_id
      WHERE i.id = ? AND i.deleted_at IS NULL AND u.suspended = 0 AND u.deleted_at IS NULL`
   ).bind(String(id).slice(0, 64)).first();
   if (!i) throw notFound("This link may have been removed.");
-  return json({ item: { ...itemView(i), source: void 0 }, business: i.business_name || i.full_name || "VyCheckout" });
+  const business = i.business_name || i.full_name || "VyCheckout";
+  return json({
+    item: { ...itemView(i), source: void 0 },
+    business,
+    seller: { name: business, avatar: i.avatar, avatar_url: mediaUrl(i.avatar_key), ref_code: i.ref_code, since: i.seller_since }
+  });
 }
 async function publicProfile(env, request, code) {
   const p = await env.DB.prepare(
