@@ -17,7 +17,7 @@
   // Connects vycheckout.com to this Worker on every deploy
   "routes": [
     { "pattern": "vycheckout.com", "custom_domain": true },
-{ "pattern": "www.vycheckout.com", "custom_domain": true }
+    { "pattern": "www.vycheckout.com", "custom_domain": true }
   ],
   "workers_dev": true,
 
@@ -27,6 +27,11 @@
       "database_name": "vycheckout",
       "database_id": "661f5894-af52-46b3-b857-0756e3f446f0"
     }
+  ],
+
+  // Photos on posts and profile pictures
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "vycheckout-media" }
   ],
 
   // Retries merchant webhooks and cleans up expired sessions every 5 minutes

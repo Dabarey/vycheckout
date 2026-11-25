@@ -1,28 +1,21 @@
-var __defProp = Object.defineProperty;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
-
 // src/lib.js
 var HttpError = class extends Error {
-  static {
-    __name(this, "HttpError");
-  }
   constructor(status, message, code) {
     super(message);
     this.status = status;
     this.code = code;
   }
 };
-var bad = /* @__PURE__ */ __name((msg, code) => new HttpError(400, msg, code), "bad");
-var unauthorized = /* @__PURE__ */ __name((msg = "Please sign in") => new HttpError(401, msg, "unauthorized"), "unauthorized");
-var forbidden = /* @__PURE__ */ __name((msg = "Not allowed") => new HttpError(403, msg, "forbidden"), "forbidden");
-var notFound = /* @__PURE__ */ __name((msg = "Not found") => new HttpError(404, msg, "not_found"), "notFound");
+var bad = (msg, code) => new HttpError(400, msg, code);
+var unauthorized = (msg = "Please sign in") => new HttpError(401, msg, "unauthorized");
+var forbidden = (msg = "Not allowed") => new HttpError(403, msg, "forbidden");
+var notFound = (msg = "Not found") => new HttpError(404, msg, "not_found");
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...headers }
   });
 }
-__name(json, "json");
 async function readJson(request, maxBytes = 64 * 1024) {
   const text = await request.text();
   if (text.length > maxBytes) throw bad("Request too large");
@@ -35,42 +28,35 @@ async function readJson(request, maxBytes = 64 * 1024) {
     throw bad("Invalid JSON");
   }
 }
-__name(readJson, "readJson");
-var nowIso = /* @__PURE__ */ __name(() => (/* @__PURE__ */ new Date()).toISOString(), "nowIso");
-var newId = /* @__PURE__ */ __name(() => crypto.randomUUID(), "newId");
+var nowIso = () => (/* @__PURE__ */ new Date()).toISOString();
+var newId = () => crypto.randomUUID();
 var enc = new TextEncoder();
 function randomToken(bytes = 32) {
   const a = new Uint8Array(bytes);
   crypto.getRandomValues(a);
   return b64url(a);
 }
-__name(randomToken, "randomToken");
 function b64url(bytes) {
   let s = "";
   for (const b of bytes) s += String.fromCharCode(b);
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
-__name(b64url, "b64url");
 function b64(bytes) {
   let s = "";
   for (const b of bytes) s += String.fromCharCode(b);
   return btoa(s);
 }
-__name(b64, "b64");
 function unb64(str2) {
   return Uint8Array.from(atob(str2), (c) => c.charCodeAt(0));
 }
-__name(unb64, "unb64");
-var hex = /* @__PURE__ */ __name((buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join(""), "hex");
+var hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 async function sha256Hex(text) {
   return hex(await crypto.subtle.digest("SHA-256", enc.encode(text)));
 }
-__name(sha256Hex, "sha256Hex");
 async function hmacHex(secret, text) {
   const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return hex(await crypto.subtle.sign("HMAC", key, enc.encode(text)));
 }
-__name(hmacHex, "hmacHex");
 function safeEqual(a, b) {
   a = String(a);
   b = String(b);
@@ -79,7 +65,6 @@ function safeEqual(a, b) {
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
-__name(safeEqual, "safeEqual");
 var PBKDF2_ITER = 1e5;
 async function hashPassword(password) {
   const salt = new Uint8Array(16);
@@ -87,53 +72,45 @@ async function hashPassword(password) {
   const bits = await pbkdf2(password, salt, PBKDF2_ITER);
   return `pbkdf2$${PBKDF2_ITER}$${b64(salt)}$${b64(bits)}`;
 }
-__name(hashPassword, "hashPassword");
 async function verifyPassword(password, stored) {
   if (!stored || !stored.startsWith("pbkdf2$")) return false;
   const [, iter, saltB64, hashB64] = stored.split("$");
   const bits = await pbkdf2(password, unb64(saltB64), parseInt(iter, 10));
   return safeEqual(b64(bits), hashB64);
 }
-__name(verifyPassword, "verifyPassword");
 async function pbkdf2(password, salt, iterations) {
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
   return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256));
 }
-__name(pbkdf2, "pbkdf2");
 var CURRENCIES = ["USD", "EUR", "GBP", "AUD", "CAD", "SGD", "JPY", "MXN", "HKD"];
 var ZERO_DECIMAL = ["JPY"];
-var isZeroDecimal = /* @__PURE__ */ __name((c) => ZERO_DECIMAL.includes(c), "isZeroDecimal");
-var minorFactor = /* @__PURE__ */ __name((c) => isZeroDecimal(c) ? 1 : 100, "minorFactor");
+var isZeroDecimal = (c) => ZERO_DECIMAL.includes(c);
+var minorFactor = (c) => isZeroDecimal(c) ? 1 : 100;
 function toMinor(amount, currency) {
   const n = Number(amount);
   if (!Number.isFinite(n)) throw bad("Invalid amount");
   return Math.round(n * minorFactor(currency));
 }
-__name(toMinor, "toMinor");
-var toMajor = /* @__PURE__ */ __name((minor, currency) => Number(minor) / minorFactor(currency), "toMajor");
+var toMajor = (minor, currency) => Number(minor) / minorFactor(currency);
 function majorString(minor, currency) {
   return isZeroDecimal(currency) ? String(minor) : (minor / 100).toFixed(2);
 }
-__name(majorString, "majorString");
 function cleanCurrency(c) {
   const cur = String(c || "USD").toUpperCase();
   if (!CURRENCIES.includes(cur)) throw bad("Unsupported currency");
   return cur;
 }
-__name(cleanCurrency, "cleanCurrency");
 function str(v, { max = 200, required = false, field = "Field" } = {}) {
   const s = typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim();
   if (required && !s) throw bad(`${field} is required`);
   if (s.length > max) throw bad(`${field} is too long (max ${max} characters)`);
   return s;
 }
-__name(str, "str");
 function emailOf(v) {
   const e = str(v, { max: 254, required: true, field: "Email" }).toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) throw bad("Enter a valid email address");
   return e;
 }
-__name(emailOf, "emailOf");
 function safeWebhookUrl(raw) {
   let u;
   try {
@@ -149,7 +126,6 @@ function safeWebhookUrl(raw) {
   if (raw.length > 500) throw bad("Webhook URL is too long");
   return u.toString();
 }
-__name(safeWebhookUrl, "safeWebhookUrl");
 async function rateLimit(env, key, limit, windowMs) {
   const now = Date.now();
   const row = await env.DB.prepare(
@@ -161,32 +137,30 @@ async function rateLimit(env, key, limit, windowMs) {
   ).bind(key, now, now - windowMs).first();
   if (row && row.count > limit) throw new HttpError(429, "Too many attempts. Please wait a few minutes and try again.", "rate_limited");
 }
-__name(rateLimit, "rateLimit");
-var clientIp = /* @__PURE__ */ __name((request) => request.headers.get("CF-Connecting-IP") || "local", "clientIp");
+var clientIp = (request) => request.headers.get("CF-Connecting-IP") || "local";
 async function audit(env, actorId, action, target, details) {
   await env.DB.prepare("INSERT INTO audit_log (id, actor_id, action, target, details) VALUES (?,?,?,?,?)").bind(newId(), actorId || null, action, target || null, details ? JSON.stringify(details) : null).run();
 }
-__name(audit, "audit");
-var holdDays = /* @__PURE__ */ __name((env) => parseFloat(env.HOLD_DAYS || "7"), "holdDays");
+var holdDays = (env) => parseFloat(env.HOLD_DAYS || "7");
 function holdDaysFor(env, u) {
   if (!u) return holdDays(env);
   if (u.hold_days != null) return u.hold_days;
   const ageDays = (Date.now() - new Date(u.created_at).getTime()) / 864e5;
   return ageDays < parseFloat(env.NEW_ACCOUNT_DAYS || "30") ? parseFloat(env.NEW_ACCOUNT_HOLD_DAYS || "14") : holdDays(env);
 }
-__name(holdDaysFor, "holdDaysFor");
 async function availableAtFor(env, userId) {
   const u = await env.DB.prepare("SELECT hold_days, created_at FROM users WHERE id = ?").bind(userId).first();
   const days = holdDaysFor(env, u);
   return days > 0 ? new Date(Date.now() + days * 864e5).toISOString() : null;
 }
-__name(availableAtFor, "availableAtFor");
+var MEDIA_KEY_RE = /^(p|a)\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+var mediaUrl = (key) => key && MEDIA_KEY_RE.test(key) ? `/api/media/${key}` : null;
 
 // src/human.js
 var COOKIE = "vy_human";
 var PASS_SECONDS = 30 * 60;
-var enabled = /* @__PURE__ */ __name((env) => !!(env.TURNSTILE_SECRET_KEY && env.TURNSTILE_SITE_KEY), "enabled");
-var signingKey = /* @__PURE__ */ __name((env) => `human-pass:${env.TURNSTILE_SECRET_KEY}`, "signingKey");
+var enabled = (env) => !!(env.TURNSTILE_SECRET_KEY && env.TURNSTILE_SITE_KEY);
+var signingKey = (env) => `human-pass:${env.TURNSTILE_SECRET_KEY}`;
 function readCookie(request, name) {
   for (const part of (request.headers.get("Cookie") || "").split(";")) {
     const [k, ...v] = part.trim().split("=");
@@ -194,7 +168,6 @@ function readCookie(request, name) {
   }
   return null;
 }
-__name(readCookie, "readCookie");
 async function verifyHuman(env, request) {
   const b = await readJson(request);
   if (!enabled(env)) return json({ ok: true, expires_in: PASS_SECONDS });
@@ -214,17 +187,15 @@ async function verifyHuman(env, request) {
     "Set-Cookie": `${COOKIE}=${exp}.${sig}; Path=/api; HttpOnly; Secure; SameSite=Lax; Max-Age=${PASS_SECONDS}`
   });
 }
-__name(verifyHuman, "verifyHuman");
 async function requireHuman(env, request) {
   if (!enabled(env)) return;
   const [exp, sig] = (readCookie(request, COOKIE) || "").split(".");
   const ok = exp && sig && parseInt(exp, 10) > Date.now() / 1e3 && safeEqual(sig, await hmacHex(signingKey(env), exp));
   if (!ok) throw new HttpError(403, "Please complete the security check.", "human_check");
 }
-__name(requireHuman, "requireHuman");
 
 // src/email.js
-var escHtml = /* @__PURE__ */ __name((s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]), "escHtml");
+var escHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 async function sendEmail(env, { to, subject, text, html }) {
   if (!env.RESEND_API_KEY) {
     if (env.DEV === "true") console.log(`[email to ${to}] ${subject}
@@ -245,7 +216,6 @@ ${text}`);
     return false;
   }
 }
-__name(sendEmail, "sendEmail");
 function linkEmail(env, to, subject, intro, buttonText, url) {
   return sendEmail(env, {
     to,
@@ -261,14 +231,12 @@ If you didn't ask for this, you can ignore this email.`,
       <p style="color:#666;font-size:13px">If you didn't ask for this, you can ignore this email.</p></div>`
   });
 }
-__name(linkEmail, "linkEmail");
 function notifyAdmin(env, subject, lines) {
   const to = (env.ADMIN_EMAILS || "").split(",").map((s) => s.trim()).filter(Boolean)[0];
   if (!to) return Promise.resolve(false);
   const text = lines.join("\n");
   return sendEmail(env, { to, subject, text, html: `<pre style="font-family:system-ui,sans-serif">${escHtml(text)}</pre>` });
 }
-__name(notifyAdmin, "notifyAdmin");
 async function alert(env, subject, lines) {
   const jobs = [notifyAdmin(env, `\u26A0\uFE0F VyCheckout: ${subject}`, lines)];
   if (env.ALERT_WEBHOOK_URL) {
@@ -283,8 +251,7 @@ ${lines.join("\n")}`;
   }
   await Promise.all(jobs);
 }
-__name(alert, "alert");
-var money = /* @__PURE__ */ __name((minor, currency) => {
+var money = (minor, currency) => {
   const zero = currency === "JPY";
   const v = zero ? minor : minor / 100;
   try {
@@ -292,7 +259,7 @@ var money = /* @__PURE__ */ __name((minor, currency) => {
   } catch {
     return `${v.toFixed(zero ? 0 : 2)} ${currency}`;
   }
-}, "money");
+};
 function payerReceiptEmail(env, { to, business, description, grossMinor, currency, txnId, method, cancelUrl: cancelUrl2 }) {
   const lines = [
     `Thanks for your payment to ${business}.`,
@@ -318,7 +285,6 @@ function payerReceiptEmail(env, { to, business, description, grossMinor, currenc
   </div>`;
   return sendEmail(env, { to, subject: `Receipt: ${money(grossMinor, currency)} to ${business}`, text, html });
 }
-__name(payerReceiptEmail, "payerReceiptEmail");
 function saleAlertEmail(env, { to, description, grossMinor, netMinor, currency, availableAt, payerName, appUrl: appUrl2 }) {
   const when = availableAt ? new Date(availableAt).toDateString() : "now";
   const lines = [
@@ -336,17 +302,15 @@ function saleAlertEmail(env, { to, description, grossMinor, netMinor, currency, 
       <p><a href="${escHtml(appUrl2)}">Open your dashboard</a></p><p style="font-size:12px;color:#777">You can turn these emails off in Account settings.</p></div>`
   });
 }
-__name(saleAlertEmail, "saleAlertEmail");
 
 // src/auth.js
 var SESSION_COOKIE = "vy_session";
 var SESSION_DAYS = 30;
 var OAUTH_COOKIE = "vy_oauth";
-var appUrl = /* @__PURE__ */ __name((env, request) => (env.APP_URL || new URL(request.url).origin).replace(/\/$/, ""), "appUrl");
+var appUrl = (env, request) => (env.APP_URL || new URL(request.url).origin).replace(/\/$/, "");
 function cookie(name, value, { maxAge, path = "/" } = {}) {
   return `${name}=${value}; Path=${path}; HttpOnly; Secure; SameSite=Lax${maxAge != null ? `; Max-Age=${maxAge}` : ""}`;
 }
-__name(cookie, "cookie");
 function readCookie2(request, name) {
   const raw = request.headers.get("Cookie") || "";
   for (const part of raw.split(";")) {
@@ -355,14 +319,12 @@ function readCookie2(request, name) {
   }
   return null;
 }
-__name(readCookie2, "readCookie");
 function isAdmin(env, user) {
   if (!user || !user.email_verified) return false;
   if (user.is_admin) return true;
   const list = (env.ADMIN_EMAILS || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
   return list.includes(String(user.email).toLowerCase());
 }
-__name(isAdmin, "isAdmin");
 function selfView(env, u) {
   return {
     id: u.id,
@@ -372,6 +334,7 @@ function selfView(env, u) {
     business_name: u.business_name,
     bio: u.bio,
     avatar: u.avatar,
+    avatar_url: mediaUrl(u.avatar_key),
     ref_code: u.ref_code,
     has_referrer: !!u.referrer_id,
     created_at: u.created_at,
@@ -381,14 +344,12 @@ function selfView(env, u) {
     notify_sales: u.notify_sales == null ? true : !!u.notify_sales
   };
 }
-__name(selfView, "selfView");
 async function createSession(env, userId) {
   const token = randomToken(32);
   await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?,?,?)").bind(await sha256Hex(token), userId, Date.now() + SESSION_DAYS * 864e5).run();
   return cookie(SESSION_COOKIE, token, { maxAge: SESSION_DAYS * 86400 });
 }
-__name(createSession, "createSession");
-var clearSessionCookie = /* @__PURE__ */ __name(() => cookie(SESSION_COOKIE, "", { maxAge: 0 }), "clearSessionCookie");
+var clearSessionCookie = () => cookie(SESSION_COOKIE, "", { maxAge: 0 });
 async function getSessionUser(env, request) {
   const token = readCookie2(request, SESSION_COOKIE);
   if (!token) return null;
@@ -398,19 +359,16 @@ async function getSessionUser(env, request) {
   ).bind(await sha256Hex(token), Date.now()).first();
   return row || null;
 }
-__name(getSessionUser, "getSessionUser");
 async function requireUser(env, request) {
   const u = await getSessionUser(env, request);
   if (!u) throw unauthorized();
   return u;
 }
-__name(requireUser, "requireUser");
 async function requireAdmin(env, request) {
   const u = await requireUser(env, request);
   if (!isAdmin(env, u)) throw forbidden("Admin only");
   return u;
 }
-__name(requireAdmin, "requireAdmin");
 async function genRefCode(env) {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   for (let i = 0; i < 10; i++) {
@@ -422,20 +380,17 @@ async function genRefCode(env) {
   }
   throw new HttpError(500, "Could not create account, please try again");
 }
-__name(genRefCode, "genRefCode");
 async function referrerIdFor(env, code) {
   const c = String(code || "").toUpperCase().trim();
   if (!c || !/^[A-Z0-9]{4,12}$/.test(c)) return null;
   const r = await env.DB.prepare("SELECT id FROM users WHERE ref_code = ? AND deleted_at IS NULL").bind(c).first();
   return r ? r.id : null;
 }
-__name(referrerIdFor, "referrerIdFor");
 async function issueToken(env, userId, purpose, ttlMs) {
   const token = randomToken(32);
   await env.DB.prepare("INSERT INTO auth_tokens (token_hash, user_id, purpose, expires_at) VALUES (?,?,?,?)").bind(await sha256Hex(token), userId, purpose, Date.now() + ttlMs).run();
   return token;
 }
-__name(issueToken, "issueToken");
 async function consumeToken(env, token, purpose) {
   if (!token || typeof token !== "string" || token.length > 100) return null;
   const row = await env.DB.prepare(
@@ -444,13 +399,11 @@ async function consumeToken(env, token, purpose) {
   ).bind(nowIso(), await sha256Hex(token), purpose, Date.now()).first();
   return row ? row.user_id : null;
 }
-__name(consumeToken, "consumeToken");
 async function sendVerification(env, request, user) {
   const token = await issueToken(env, user.id, "verify", 3 * 864e5);
   const url = `${appUrl(env, request)}/api/auth/verify?token=${encodeURIComponent(token)}`;
   await linkEmail(env, user.email, "Confirm your VyCheckout email", "Confirm your email address to finish setting up VyCheckout.", "Confirm email", url);
 }
-__name(sendVerification, "sendVerification");
 async function signup(env, request, ctx) {
   const ip = clientIp(request);
   await rateLimit(env, `signup:${ip}`, 10, 36e5);
@@ -483,7 +436,6 @@ async function signup(env, request, ctx) {
   const row = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(id).first();
   return json({ user: selfView(env, row) }, 200, { "Set-Cookie": await createSession(env, id) });
 }
-__name(signup, "signup");
 async function login(env, request) {
   const b = await readJson(request);
   const email = emailOf(b.email);
@@ -497,13 +449,11 @@ async function login(env, request) {
   if (u.suspended) throw forbidden("This account is suspended. Contact support.");
   return json({ user: selfView(env, u) }, 200, { "Set-Cookie": await createSession(env, u.id) });
 }
-__name(login, "login");
 async function logout(env, request) {
   const token = readCookie2(request, SESSION_COOKIE);
   if (token) await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256Hex(token)).run();
   return json({ ok: true }, 200, { "Set-Cookie": cookie(SESSION_COOKIE, "", { maxAge: 0 }) });
 }
-__name(logout, "logout");
 async function forgot(env, request, ctx) {
   const b = await readJson(request);
   const email = emailOf(b.email);
@@ -518,7 +468,6 @@ async function forgot(env, request, ctx) {
   }
   return json({ ok: true });
 }
-__name(forgot, "forgot");
 async function resetPassword(env, request) {
   const b = await readJson(request);
   const password = String(b.password || "");
@@ -533,14 +482,12 @@ async function resetPassword(env, request) {
   const u = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(userId).first();
   return json({ user: selfView(env, u) }, 200, { "Set-Cookie": await createSession(env, userId) });
 }
-__name(resetPassword, "resetPassword");
 async function verifyEmail(env, request) {
   const token = new URL(request.url).searchParams.get("token");
   const userId = await consumeToken(env, token, "verify");
   if (userId) await env.DB.prepare("UPDATE users SET email_verified = 1 WHERE id = ?").bind(userId).run();
   return Response.redirect(`${appUrl(env, request)}/?verified=${userId ? "1" : "0"}`, 302);
 }
-__name(verifyEmail, "verifyEmail");
 async function resendVerification(env, request, ctx) {
   const u = await requireUser(env, request);
   if (u.email_verified) return json({ ok: true, already: true });
@@ -548,7 +495,6 @@ async function resendVerification(env, request, ctx) {
   ctx.waitUntil(sendVerification(env, request, u));
   return json({ ok: true });
 }
-__name(resendVerification, "resendVerification");
 async function googleStart(env, request) {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) throw bad("Google sign-in is not set up");
   const url = new URL(request.url);
@@ -568,13 +514,12 @@ async function googleStart(env, request) {
     headers: { Location: auth.toString(), "Set-Cookie": cookie(OAUTH_COOKIE, `${state}.${ref}`, { maxAge: 600, path: "/api/auth/google" }) }
   });
 }
-__name(googleStart, "googleStart");
 async function googleCallback(env, request, ctx) {
   const base = appUrl(env, request);
-  const fail = /* @__PURE__ */ __name((reason) => new Response(null, {
+  const fail = (reason) => new Response(null, {
     status: 302,
     headers: { Location: `${base}/?login_error=${encodeURIComponent(reason)}`, "Set-Cookie": cookie(OAUTH_COOKIE, "", { maxAge: 0, path: "/api/auth/google" }) }
-  }), "fail");
+  });
   const url = new URL(request.url);
   const [state, ref] = (readCookie2(request, OAUTH_COOKIE) || "").split(".");
   if (!state || state !== url.searchParams.get("state") || !url.searchParams.get("code")) return fail("Google sign-in expired. Please try again.");
@@ -619,7 +564,6 @@ async function googleCallback(env, request, ctx) {
   headers.append("Set-Cookie", cookie(OAUTH_COOKIE, "", { maxAge: 0, path: "/api/auth/google" }));
   return new Response(null, { status: 302, headers });
 }
-__name(googleCallback, "googleCallback");
 
 // src/webhooks.js
 var MAX_ATTEMPTS = 6;
@@ -634,7 +578,6 @@ async function enqueueWebhook(env, ctx, userId, event, data) {
   ).bind(id, userId, u.webhook_url, event, payload, Date.now()).run();
   ctx.waitUntil(attempt(env, { id, user_id: userId, url: u.webhook_url, payload, attempts: 0 }));
 }
-__name(enqueueWebhook, "enqueueWebhook");
 async function attempt(env, row) {
   const u = await env.DB.prepare("SELECT webhook_secret FROM users WHERE id = ?").bind(row.user_id).first();
   if (!u?.webhook_secret) {
@@ -666,7 +609,6 @@ async function attempt(env, row) {
     await env.DB.prepare("UPDATE webhook_deliveries SET attempts = ?, last_error = ?, next_attempt_at = ? WHERE id = ?").bind(attempts, error, next, row.id).run();
   }
 }
-__name(attempt, "attempt");
 async function retryDueWebhooks(env) {
   const { results } = await env.DB.prepare(
     // First attempts normally run right away; pick them up here only if that never happened (2+ min old)
@@ -676,11 +618,10 @@ async function retryDueWebhooks(env) {
   ).bind(Date.now(), Date.now() - 12e4).all();
   await Promise.all(results.map((r) => attempt(env, r)));
 }
-__name(retryDueWebhooks, "retryDueWebhooks");
 
 // src/payments.js
-var feeBps = /* @__PURE__ */ __name((env) => parseInt(env.PLATFORM_FEE_BPS || "1900", 10), "feeBps");
-var refBps = /* @__PURE__ */ __name((env) => parseInt(env.REFERRAL_BPS || "100", 10), "refBps");
+var feeBps = (env) => parseInt(env.PLATFORM_FEE_BPS || "1900", 10);
+var refBps = (env) => parseInt(env.REFERRAL_BPS || "100", 10);
 async function payableItem(env, itemId) {
   if (typeof itemId !== "string" || itemId.length > 64) throw notFound("This link is not valid.");
   const item = await env.DB.prepare(
@@ -692,7 +633,6 @@ async function payableItem(env, itemId) {
   if (item.expires_at && new Date(item.expires_at) < /* @__PURE__ */ new Date()) throw bad("This link has expired. Ask the sender for a new one.", "expired");
   return item;
 }
-__name(payableItem, "payableItem");
 function priceFor(env, item, requested) {
   if (!item.custom_amount) return item.amount_minor;
   if (requested == null || requested === "") throw bad("Enter an amount");
@@ -703,13 +643,11 @@ function priceFor(env, item, requested) {
   if (minor > max) throw bad(`Maximum amount is ${majorString(max, item.currency)} ${item.currency}`);
   return minor;
 }
-__name(priceFor, "priceFor");
 async function guardPayer(env, request) {
   await rateLimit(env, `order:${clientIp(request)}`, 40, 6e5);
   const user = await getSessionUser(env, request);
   if (!user) await requireHuman(env, request);
 }
-__name(guardPayer, "guardPayer");
 async function newOrder(env, request, provider) {
   const b = await readJson(request);
   await guardPayer(env, request);
@@ -721,7 +659,6 @@ async function newOrder(env, request, provider) {
   await env.DB.prepare("INSERT INTO orders (id, item_id, owner_id, provider, amount_minor, currency) VALUES (?,?,?,?,?,?)").bind(order.id, order.item_id, order.owner_id, provider, amount, item.currency).run();
   return { order, item, body: b };
 }
-__name(newOrder, "newOrder");
 async function recordPayment(env, ctx, order, p) {
   if (p.currency !== order.currency || p.grossMinor !== order.amount_minor) {
     await audit(env, null, "payment_amount_mismatch", order.id || p.subscriptionId, { expected: [order.amount_minor, order.currency], got: [p.grossMinor, p.currency], ref: p.providerRef });
@@ -817,7 +754,6 @@ async function recordPayment(env, ctx, order, p) {
   }
   return txn;
 }
-__name(recordPayment, "recordPayment");
 async function applyRefund(env, ctx, txn, provider, refundRef, amountMinor) {
   const remaining = txn.gross_minor - txn.refunded_minor;
   const d = Math.min(Math.max(0, amountMinor), remaining);
@@ -825,10 +761,10 @@ async function applyRefund(env, ctx, txn, provider, refundRef, amountMinor) {
   const refundId = newId();
   const merchantBack = Math.round(d * txn.net_minor / txn.gross_minor);
   const referralBack = txn.referral_minor ? Math.round(d * txn.referral_minor / txn.gross_minor) : 0;
-  const holdOf = /* @__PURE__ */ __name(async (kind) => {
+  const holdOf = async (kind) => {
     const r = await env.DB.prepare("SELECT available_at FROM ledger WHERE txn_id = ? AND kind = ?").bind(txn.id, kind).first();
     return r?.available_at && r.available_at > nowIso() ? r.available_at : null;
-  }, "holdOf");
+  };
   const onlyIfNew = "WHERE EXISTS (SELECT 1 FROM refunds WHERE id = ?)";
   const stmts = [
     env.DB.prepare("INSERT OR IGNORE INTO refunds (id, provider, provider_refund_id, txn_id, amount_minor) VALUES (?,?,?,?,?)").bind(refundId, provider, refundRef, txn.id, d),
@@ -864,7 +800,6 @@ async function applyRefund(env, ctx, txn, provider, refundRef, amountMinor) {
     ]));
   }
 }
-__name(applyRefund, "applyRefund");
 async function receiptView(env, txn) {
   const owner = await env.DB.prepare("SELECT business_name, full_name FROM users WHERE id = ?").bind(txn.owner_id).first();
   return {
@@ -877,8 +812,7 @@ async function receiptView(env, txn) {
     created_at: txn.created_at
   };
 }
-__name(receiptView, "receiptView");
-var ppBase = /* @__PURE__ */ __name((env) => env.PAYPAL_API_BASE || (env.PAYPAL_ENV === "sandbox" ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com"), "ppBase");
+var ppBase = (env) => env.PAYPAL_API_BASE || (env.PAYPAL_ENV === "sandbox" ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com");
 var ppTokenCache = null;
 async function ppToken(env) {
   if (ppTokenCache && ppTokenCache.cid === env.PAYPAL_CLIENT_ID && ppTokenCache.exp > Date.now() + 6e4) return ppTokenCache.token;
@@ -896,7 +830,6 @@ async function ppToken(env) {
   ppTokenCache = { cid: env.PAYPAL_CLIENT_ID, token: d.access_token, exp: Date.now() + d.expires_in * 1e3 };
   return d.access_token;
 }
-__name(ppToken, "ppToken");
 async function pp(env, path, { method = "GET", body, requestId } = {}) {
   const headers = { Authorization: `Bearer ${await ppToken(env)}`, "Content-Type": "application/json" };
   if (requestId) headers["PayPal-Request-Id"] = requestId;
@@ -909,7 +842,6 @@ async function pp(env, path, { method = "GET", body, requestId } = {}) {
   }
   return { ok: res.ok, status: res.status, data };
 }
-__name(pp, "pp");
 async function paypalCreateOrder(env, request) {
   const { order, item } = await newOrder(env, request, "paypal");
   const r = await pp(env, "/v2/checkout/orders", {
@@ -932,7 +864,6 @@ async function paypalCreateOrder(env, request) {
   await env.DB.prepare("UPDATE orders SET provider_order_id = ? WHERE id = ?").bind(r.data.id, order.id).run();
   return json({ id: r.data.id });
 }
-__name(paypalCreateOrder, "paypalCreateOrder");
 async function recordFromPayPalOrder(env, ctx, order, ppOrder) {
   const pu = ppOrder?.purchase_units?.[0];
   const cap = pu?.payments?.captures?.[0];
@@ -951,7 +882,6 @@ async function recordFromPayPalOrder(env, ctx, order, ppOrder) {
   });
   return { txn };
 }
-__name(recordFromPayPalOrder, "recordFromPayPalOrder");
 async function paypalCapture(env, request, ctx) {
   const b = await readJson(request);
   if (typeof b.order_id !== "string" || b.order_id.length > 64) throw bad("Invalid order");
@@ -971,8 +901,7 @@ async function paypalCapture(env, request, ctx) {
   if (res.pending) return json({ pending: true, message: "PayPal is still processing this payment. It will appear once PayPal confirms it." });
   return json({ receipt: await receiptView(env, res.txn) });
 }
-__name(paypalCapture, "paypalCapture");
-var stripeBase = /* @__PURE__ */ __name((env) => env.STRIPE_API_BASE || "https://api.stripe.com", "stripeBase");
+var stripeBase = (env) => env.STRIPE_API_BASE || "https://api.stripe.com";
 var STRIPE_VERSION = "2024-06-20";
 async function stripe(env, path, { method = "GET", form, idempotencyKey } = {}) {
   if (!env.STRIPE_SECRET_KEY) throw new HttpError(503, "Card payments are not set up", "stripe_unconfigured");
@@ -983,7 +912,6 @@ async function stripe(env, path, { method = "GET", form, idempotencyKey } = {}) 
   const data = await res.json().catch(() => null);
   return { ok: res.ok, status: res.status, data };
 }
-__name(stripe, "stripe");
 async function stripeCreateIntent(env, request) {
   const { order, item, body } = await newOrder(env, request, "stripe");
   let email = "";
@@ -1008,7 +936,6 @@ async function stripeCreateIntent(env, request) {
   await env.DB.prepare("UPDATE orders SET provider_order_id = ? WHERE id = ?").bind(r.data.id, order.id).run();
   return json({ client_secret: r.data.client_secret, intent_id: r.data.id });
 }
-__name(stripeCreateIntent, "stripeCreateIntent");
 async function recordFromIntent(env, ctx, pi, payer = {}) {
   const orderId = pi?.metadata?.order_id;
   const order = orderId && await env.DB.prepare("SELECT * FROM orders WHERE id = ? AND provider = 'stripe'").bind(orderId).first();
@@ -1023,7 +950,6 @@ async function recordFromIntent(env, ctx, pi, payer = {}) {
     payerEmail: payer.email || pi.metadata?.payer_email || pi.receipt_email || ""
   });
 }
-__name(recordFromIntent, "recordFromIntent");
 async function stripeConfirm(env, request, ctx) {
   const b = await readJson(request);
   if (typeof b.intent_id !== "string" || !/^pi_[A-Za-z0-9]+$/.test(b.intent_id)) throw bad("Invalid payment");
@@ -1033,7 +959,6 @@ async function stripeConfirm(env, request, ctx) {
   const txn = await recordFromIntent(env, ctx, r.data, { name: bd.name, email: bd.email });
   return json({ receipt: await receiptView(env, txn) });
 }
-__name(stripeConfirm, "stripeConfirm");
 async function verifyStripeSignature(env, header, raw) {
   if (!env.STRIPE_WEBHOOK_SECRET || !header) return false;
   const parts = Object.fromEntries(header.split(",").map((p) => p.split("=")).filter((p) => p.length === 2).map(([k, v]) => [k.trim(), v.trim()]));
@@ -1043,7 +968,6 @@ async function verifyStripeSignature(env, header, raw) {
   const expected = await hmacHex(env.STRIPE_WEBHOOK_SECRET, `${t}.${raw}`);
   return sigs.some((s) => safeEqual(s, expected));
 }
-__name(verifyStripeSignature, "verifyStripeSignature");
 async function stripeOneTimeEvent(env, ctx, event) {
   const obj = event.data?.object || {};
   if (event.type === "payment_intent.succeeded") {
@@ -1072,7 +996,6 @@ async function stripeOneTimeEvent(env, ctx, event) {
   }
   return false;
 }
-__name(stripeOneTimeEvent, "stripeOneTimeEvent");
 async function paypalOneTimeEvent(env, ctx, event) {
   const res = event.resource || {};
   if (event.event_type === "PAYMENT.CAPTURE.COMPLETED") {
@@ -1111,10 +1034,9 @@ async function paypalOneTimeEvent(env, ctx, event) {
   }
   return false;
 }
-__name(paypalOneTimeEvent, "paypalOneTimeEvent");
 async function verifyPayPalWebhook(env, request, event) {
   if (!env.PAYPAL_WEBHOOK_ID) return false;
-  const h = /* @__PURE__ */ __name((n) => request.headers.get(n), "h");
+  const h = (n) => request.headers.get(n);
   const v = await pp(env, "/v1/notifications/verify-webhook-signature", {
     method: "POST",
     body: {
@@ -1129,7 +1051,6 @@ async function verifyPayPalWebhook(env, request, event) {
   });
   return v.ok && v.data?.verification_status === "SUCCESS";
 }
-__name(verifyPayPalWebhook, "verifyPayPalWebhook");
 
 // src/subscriptions.js
 var CYCLES = {
@@ -1138,9 +1059,9 @@ var CYCLES = {
   QUARTERLY: { stripe: ["month", 3], paypal: ["MONTH", 3] },
   ANNUALLY: { stripe: ["year", 1], paypal: ["YEAR", 1] }
 };
-var cycleOf = /* @__PURE__ */ __name((c) => CYCLES[c] || CYCLES.MONTHLY, "cycleOf");
-var cancelUrl = /* @__PURE__ */ __name((env, row) => `${(env.APP_URL || "").replace(/\/$/, "")}/?cancel_sub=${encodeURIComponent(row.cancel_token)}`, "cancelUrl");
-var orderFor = /* @__PURE__ */ __name((row) => ({ id: null, owner_id: row.owner_id, item_id: row.item_id, amount_minor: row.amount_minor, currency: row.currency }), "orderFor");
+var cycleOf = (c) => CYCLES[c] || CYCLES.MONTHLY;
+var cancelUrl = (env, row) => `${(env.APP_URL || "").replace(/\/$/, "")}/?cancel_sub=${encodeURIComponent(row.cancel_token)}`;
+var orderFor = (row) => ({ id: null, owner_id: row.owner_id, item_id: row.item_id, amount_minor: row.amount_minor, currency: row.currency });
 async function startRow(env, request, provider) {
   const b = await readJson(request);
   await guardPayer(env, request);
@@ -1164,7 +1085,6 @@ async function startRow(env, request, provider) {
   ).bind(row.id, row.item_id, row.owner_id, provider, row.payer_email, row.payer_name, row.amount_minor, row.currency, row.cycle, row.cancel_token).run();
   return { row, item };
 }
-__name(startRow, "startRow");
 function subReceipt(env, row, item, business, extra = {}) {
   return {
     id: row.id,
@@ -1177,7 +1097,6 @@ function subReceipt(env, row, item, business, extra = {}) {
     ...extra
   };
 }
-__name(subReceipt, "subReceipt");
 async function setStatus(env, row, status) {
   if (row.status === status) return;
   const now = nowIso();
@@ -1189,7 +1108,6 @@ async function setStatus(env, row, status) {
   ).bind(status, status, now, status, now, row.id).run();
   row.status = status;
 }
-__name(setStatus, "setStatus");
 async function ensureStripeProduct(env, item) {
   if (item.stripe_product_id) return item.stripe_product_id;
   const r = await stripe(env, "/v1/products", {
@@ -1204,7 +1122,6 @@ async function ensureStripeProduct(env, item) {
   await env.DB.prepare("UPDATE items SET stripe_product_id = ? WHERE id = ?").bind(r.data.id, item.id).run();
   return r.data.id;
 }
-__name(ensureStripeProduct, "ensureStripeProduct");
 async function stripeSubscribe(env, request) {
   const { row, item } = await startRow(env, request, "stripe");
   const product = await ensureStripeProduct(env, item);
@@ -1241,7 +1158,6 @@ async function stripeSubscribe(env, request) {
   await env.DB.prepare("UPDATE subscriptions SET provider_sub_id = ?, stripe_customer_id = ? WHERE id = ?").bind(sub.data.id, cust.data.id, row.id).run();
   return json({ client_secret: secret, subscription_id: sub.data.id });
 }
-__name(stripeSubscribe, "stripeSubscribe");
 async function recordStripeInvoice(env, ctx, row, inv) {
   if (!inv || inv.status !== "paid" || !inv.amount_paid) return null;
   const piId = typeof inv.payment_intent === "string" ? inv.payment_intent : inv.payment_intent?.id;
@@ -1258,7 +1174,6 @@ async function recordStripeInvoice(env, ctx, row, inv) {
   await setStatus(env, row, "active");
   return txn;
 }
-__name(recordStripeInvoice, "recordStripeInvoice");
 async function stripeSubscribeConfirm(env, request, ctx) {
   const b = await readJson(request);
   if (typeof b.subscription_id !== "string" || !/^sub_[A-Za-z0-9]+$/.test(b.subscription_id)) throw bad("Invalid subscription");
@@ -1270,7 +1185,6 @@ async function stripeSubscribeConfirm(env, request, ctx) {
   if (!txn) throw new HttpError(402, "The first payment has not gone through yet.", "not_paid");
   return json({ receipt: { ...await receiptView(env, txn), subscription: true } });
 }
-__name(stripeSubscribeConfirm, "stripeSubscribeConfirm");
 var STRIPE_STATUS = { active: "active", trialing: "active", past_due: "past_due", unpaid: "past_due", canceled: "cancelled", incomplete_expired: "cancelled" };
 async function stripeSubscriptionEvent(env, ctx, event) {
   const obj = event.data?.object || {};
@@ -1294,7 +1208,6 @@ async function stripeSubscriptionEvent(env, ctx, event) {
   }
   return false;
 }
-__name(stripeSubscriptionEvent, "stripeSubscriptionEvent");
 async function ensurePayPalPlan(env, item) {
   if (item.paypal_plan_id) return item.paypal_plan_id;
   let productId = item.paypal_product_id;
@@ -1336,13 +1249,11 @@ async function ensurePayPalPlan(env, item) {
   await env.DB.prepare("UPDATE items SET paypal_plan_id = ? WHERE id = ?").bind(plan.data.id, item.id).run();
   return plan.data.id;
 }
-__name(ensurePayPalPlan, "ensurePayPalPlan");
 async function paypalSubscribeStart(env, request) {
   const { row, item } = await startRow(env, request, "paypal");
   const planId = await ensurePayPalPlan(env, item);
   return json({ plan_id: planId, custom_id: row.id, email: row.payer_email });
 }
-__name(paypalSubscribeStart, "paypalSubscribeStart");
 async function syncPayPalPayments(env, ctx, row) {
   if (!row.provider_sub_id) return [];
   const start = new Date(new Date(row.created_at).getTime() - 864e5).toISOString();
@@ -1371,7 +1282,6 @@ async function syncPayPalPayments(env, ctx, row) {
   }
   return out;
 }
-__name(syncPayPalPayments, "syncPayPalPayments");
 var PAYPAL_STATUS = { ACTIVE: "active", APPROVED: "active", SUSPENDED: "past_due", CANCELLED: "cancelled", EXPIRED: "cancelled" };
 async function paypalSubscribeActivate(env, request, ctx) {
   const b = await readJson(request);
@@ -1393,7 +1303,6 @@ async function paypalSubscribeActivate(env, request, ctx) {
   if (paid.length) return json({ receipt: { ...await receiptView(env, paid[0]), subscription: true } });
   return json({ receipt: subReceipt(env, row, item, business, { subscription: true, pending: true }) });
 }
-__name(paypalSubscribeActivate, "paypalSubscribeActivate");
 async function paypalSubscriptionEvent(env, ctx, event) {
   const res = event.resource || {};
   const t = event.event_type;
@@ -1427,7 +1336,6 @@ async function paypalSubscriptionEvent(env, ctx, event) {
   }
   return false;
 }
-__name(paypalSubscriptionEvent, "paypalSubscriptionEvent");
 async function cancelAtProvider(env, row, reason) {
   if (row.status === "cancelled") return;
   if (row.provider_sub_id) {
@@ -1439,7 +1347,6 @@ async function cancelAtProvider(env, row, reason) {
   }
   await setStatus(env, row, "cancelled");
 }
-__name(cancelAtProvider, "cancelAtProvider");
 async function merchantCancel(env, request, id) {
   const u = await requireUser(env, request);
   const row = await env.DB.prepare("SELECT * FROM subscriptions WHERE id = ? AND owner_id = ?").bind(id, u.id).first();
@@ -1448,7 +1355,6 @@ async function merchantCancel(env, request, id) {
   await audit(env, u.id, "subscription_cancel", id);
   return json({ ok: true });
 }
-__name(merchantCancel, "merchantCancel");
 async function rowByToken(env, token) {
   if (typeof token !== "string" || token.length < 20 || token.length > 64) throw notFound("This cancel link is not valid.");
   const row = await env.DB.prepare(
@@ -1458,7 +1364,6 @@ async function rowByToken(env, token) {
   if (!row) throw notFound("This cancel link is not valid.");
   return row;
 }
-__name(rowByToken, "rowByToken");
 async function publicLookup(env, request) {
   const row = await rowByToken(env, (await readJson(request)).token);
   return json({
@@ -1471,13 +1376,11 @@ async function publicLookup(env, request) {
     email: row.payer_email.replace(/^(.).*(@.*)$/, "$1\u2022\u2022\u2022$2")
   });
 }
-__name(publicLookup, "publicLookup");
 async function publicCancel(env, request) {
   const row = await rowByToken(env, (await readJson(request)).token);
   await cancelAtProvider(env, row, "Cancelled by the subscriber");
   return json({ ok: true });
 }
-__name(publicCancel, "publicCancel");
 async function listForOwner(env, ownerId) {
   const { results } = await env.DB.prepare(
     `SELECT s.id, s.item_id, s.provider, s.payer_email, s.payer_name, s.amount_minor, s.currency, s.cycle, s.status, s.created_at, s.activated_at, s.cancelled_at
@@ -1485,11 +1388,58 @@ async function listForOwner(env, ownerId) {
   ).bind(ownerId).all();
   return results.map((s) => ({ ...s, amount: toMajor(s.amount_minor, s.currency), amount_minor: void 0, method: s.provider === "paypal" ? "PayPal" : "Card" }));
 }
-__name(listForOwner, "listForOwner");
 async function cleanupPending(env) {
   await env.DB.prepare("DELETE FROM subscriptions WHERE status = 'pending' AND created_at < ?").bind(new Date(Date.now() - 2 * 864e5).toISOString()).run();
 }
-__name(cleanupPending, "cleanupPending");
+
+// src/media.js
+var MAX_BYTES = 3 * 1024 * 1024;
+var TYPES = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
+function sniff(b) {
+  if (b[0] === 255 && b[1] === 216 && b[2] === 255) return "jpg";
+  if (b[0] === 137 && b[1] === 80 && b[2] === 78 && b[3] === 71) return "png";
+  if (b[0] === 82 && b[1] === 73 && b[2] === 70 && b[3] === 70 && b[8] === 87 && b[9] === 69 && b[10] === 66 && b[11] === 80) return "webp";
+  return null;
+}
+async function upload(env, request) {
+  const u = await requireUser(env, request);
+  if (!env.MEDIA) throw new HttpError(503, "Photo uploads are not set up yet.", "media_off");
+  const kind = new URL(request.url).searchParams.get("kind") === "avatar" ? "avatar" : "post";
+  await rateLimit(env, `media:${u.id}`, 60, 36e5);
+  const len = parseInt(request.headers.get("Content-Length") || "0", 10);
+  if (len > MAX_BYTES) throw bad("That photo is too large (max 3 MB).");
+  const buf = new Uint8Array(await request.arrayBuffer());
+  if (!buf.length) throw bad("No photo received.");
+  if (buf.length > MAX_BYTES) throw bad("That photo is too large (max 3 MB).");
+  const ext = sniff(buf);
+  if (!ext) throw bad("Use a JPG, PNG or WebP photo.");
+  const key = `${kind === "avatar" ? "a" : "p"}/${newId()}.${ext}`;
+  await env.MEDIA.put(key, buf, { httpMetadata: { contentType: TYPES[ext] } });
+  await env.DB.prepare("INSERT INTO media (key, user_id, kind, bytes) VALUES (?,?,?,?)").bind(key, u.id, kind, buf.length).run();
+  return json({ key, url: mediaUrl(key) });
+}
+async function serve(env, request, key) {
+  if (!env.MEDIA || !MEDIA_KEY_RE.test(key)) throw notFound();
+  const etag = request.headers.get("If-None-Match");
+  const obj = await env.MEDIA.get(key);
+  if (!obj) throw notFound();
+  const headers = {
+    "Content-Type": TYPES[key.split(".").pop()],
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "ETag": obj.httpEtag,
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "default-src 'none'; sandbox"
+  };
+  if (etag && etag === obj.httpEtag) return new Response(null, { status: 304, headers });
+  return new Response(obj.body, { headers });
+}
+async function ownedKey(env, userId, key, kind) {
+  if (key === null || key === "") return null;
+  if (typeof key !== "string" || !MEDIA_KEY_RE.test(key)) throw bad("Invalid photo");
+  const row = await env.DB.prepare("SELECT 1 FROM media WHERE key = ? AND user_id = ? AND kind = ?").bind(key, userId, kind).first();
+  if (!row) throw bad("Photo not found. Please upload it again.");
+  return key;
+}
 
 // src/app.js
 var CYCLES2 = ["WEEKLY", "MONTHLY", "QUARTERLY", "ANNUALLY"];
@@ -1498,8 +1448,7 @@ function minWithdraw(env, method, currency) {
   const base = method === "paypal" ? parseFloat(env.MIN_WITHDRAW_PAYPAL || "100") : parseFloat(env.MIN_WITHDRAW_BANK || "500");
   return isZeroDecimal(currency) ? base * 100 : base;
 }
-__name(minWithdraw, "minWithdraw");
-var itemView = /* @__PURE__ */ __name((i) => ({
+var itemView = (i) => ({
   id: i.id,
   type: i.type,
   name: i.name,
@@ -1512,9 +1461,10 @@ var itemView = /* @__PURE__ */ __name((i) => ({
   expires_at: i.expires_at,
   source: i.source,
   created_at: i.created_at,
-  expired: !!(i.expires_at && new Date(i.expires_at) < /* @__PURE__ */ new Date())
-}), "itemView");
-var txnView = /* @__PURE__ */ __name((t) => ({
+  expired: !!(i.expires_at && new Date(i.expires_at) < /* @__PURE__ */ new Date()),
+  image: mediaUrl(i.image_key)
+});
+var txnView = (t) => ({
   id: t.id,
   item_id: t.item_id,
   item_type: t.item_type,
@@ -1528,8 +1478,8 @@ var txnView = /* @__PURE__ */ __name((t) => ({
   payment_method: t.provider === "paypal" ? "PayPal" : "Card",
   status: t.status,
   created_at: t.created_at
-}), "txnView");
-var wdView = /* @__PURE__ */ __name((w) => ({
+});
+var wdView = (w) => ({
   id: w.id,
   currency: w.currency,
   amount: toMajor(w.amount_minor, w.currency),
@@ -1540,8 +1490,8 @@ var wdView = /* @__PURE__ */ __name((w) => ({
   admin_note: w.admin_note,
   created_at: w.created_at,
   payout_status: w.payout_status
-}), "wdView");
-var sumsToMajor = /* @__PURE__ */ __name((rows) => Object.fromEntries(rows.filter((r) => r.total).map((r) => [r.currency, toMajor(r.total, r.currency)])), "sumsToMajor");
+});
+var sumsToMajor = (rows) => Object.fromEntries(rows.filter((r) => r.total).map((r) => [r.currency, toMajor(r.total, r.currency)]));
 var AVAILABLE_SQL = `SELECT currency, SUM(amt) AS total FROM (
     SELECT currency, amount_minor AS amt FROM ledger WHERE user_id = ?1 AND (available_at IS NULL OR available_at <= ?2)
     UNION ALL
@@ -1557,18 +1507,16 @@ async function balances(env, userId) {
   ]);
   return { available: avail.results, held: held.results };
 }
-__name(balances, "balances");
 async function me(env, request) {
   const u = await getSessionUser(env, request);
   return json({ user: u ? selfView(env, u) : null });
 }
-__name(me, "me");
 async function dashboard(env, request) {
   const u = await requireUser(env, request);
   const monthStart = /* @__PURE__ */ new Date();
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
-  const q = /* @__PURE__ */ __name((sql, ...args) => env.DB.prepare(sql).bind(...args), "q");
+  const q = (sql, ...args) => env.DB.prepare(sql).bind(...args);
   const now = nowIso();
   const [items, txns, wds, refs, bal, held, earned, refEarned, month, followers, key] = await env.DB.batch([
     q("SELECT * FROM items WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC", u.id),
@@ -1607,17 +1555,16 @@ async function dashboard(env, request) {
     webhook: { url: u.webhook_url, secret: u.webhook_secret }
   });
 }
-__name(dashboard, "dashboard");
 async function updateProfile(env, request) {
   const u = await requireUser(env, request);
   const b = await readJson(request);
   const business_name = str(b.business_name, { max: 80, field: "Business name" }) || u.business_name;
   const bio = str(b.bio, { max: 300, field: "Bio" }) || null;
   const avatar = str(b.avatar, { max: 16, field: "Avatar" }) || null;
-  await env.DB.prepare("UPDATE users SET business_name = ?, bio = ?, avatar = ? WHERE id = ?").bind(business_name, bio, avatar, u.id).run();
-  return json({ ok: true });
+  const avatar_key = b.avatar_key === void 0 ? u.avatar_key || null : await ownedKey(env, u.id, b.avatar_key, "avatar");
+  await env.DB.prepare("UPDATE users SET business_name = ?, bio = ?, avatar = ?, avatar_key = ? WHERE id = ?").bind(business_name, bio, avatar, avatar_key, u.id).run();
+  return json({ ok: true, avatar_url: mediaUrl(avatar_key) });
 }
-__name(updateProfile, "updateProfile");
 async function createItemFor(env, userId, b, source) {
   await rateLimit(env, `items:${userId}`, 100, 36e5);
   const type = String(b.type || "");
@@ -1639,10 +1586,11 @@ async function createItemFor(env, userId, b, source) {
   const expires_at = type === "lnk" && days ? new Date(Date.now() + days * 864e5).toISOString() : null;
   const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM items WHERE user_id = ? AND deleted_at IS NULL").bind(userId).first();
   if (count.n >= MAX_ITEMS_PER_USER) throw bad("You have reached the item limit. Delete some old items first.");
+  const image_key = b.image_key ? await ownedKey(env, userId, b.image_key, "post") : null;
   const id = newId();
   await env.DB.prepare(
-    `INSERT INTO items (id, user_id, type, name, description, note, amount_minor, currency, cycle, custom_amount, expires_at, source)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO items (id, user_id, type, name, description, note, amount_minor, currency, cycle, custom_amount, expires_at, source, image_key)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id,
     userId,
@@ -1655,17 +1603,16 @@ async function createItemFor(env, userId, b, source) {
     cycle,
     custom ? 1 : 0,
     expires_at,
-    source
+    source,
+    image_key
   ).run();
   return env.DB.prepare("SELECT * FROM items WHERE id = ?").bind(id).first();
 }
-__name(createItemFor, "createItemFor");
 async function createItem(env, request) {
   const u = await requireUser(env, request);
   const item = await createItemFor(env, u.id, await readJson(request), "web");
   return json({ item: itemView(item) });
 }
-__name(createItem, "createItem");
 async function deleteItem(env, request, id) {
   const u = await requireUser(env, request);
   const r = await env.DB.prepare("UPDATE items SET deleted_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL").bind(nowIso(), id, u.id).run();
@@ -1677,7 +1624,6 @@ async function deleteItem(env, request, id) {
   });
   return json({ ok: true, cancelled: subs.length - failed, cancel_failed: failed });
 }
-__name(deleteItem, "deleteItem");
 var BANK_FIELDS = ["holder", "routing", "account", "type", "sort", "iban", "bic", "ifsc", "bank", "swift", "address"];
 async function requestWithdrawal(env, request, ctx) {
   const u = await requireUser(env, request);
@@ -1724,7 +1670,6 @@ async function requestWithdrawal(env, request, ctx) {
   ]));
   return json({ ok: true, id });
 }
-__name(requestWithdrawal, "requestWithdrawal");
 async function createApiKey(env, request) {
   const u = await requireUser(env, request);
   await rateLimit(env, `apikey:${u.id}`, 10, 36e5);
@@ -1735,13 +1680,11 @@ async function createApiKey(env, request) {
   ]);
   return json({ key, prefix: key.slice(0, 16) });
 }
-__name(createApiKey, "createApiKey");
 async function revokeApiKey(env, request) {
   const u = await requireUser(env, request);
   await env.DB.prepare("UPDATE api_keys SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL").bind(nowIso(), u.id).run();
   return json({ ok: true });
 }
-__name(revokeApiKey, "revokeApiKey");
 async function setWebhook(env, request) {
   const u = await requireUser(env, request);
   const b = await readJson(request);
@@ -1755,7 +1698,6 @@ async function setWebhook(env, request) {
   await env.DB.prepare("UPDATE users SET webhook_url = ?, webhook_secret = ? WHERE id = ?").bind(url, secret, u.id).run();
   return json({ url, secret });
 }
-__name(setWebhook, "setWebhook");
 async function follow(env, request, targetId, on) {
   const u = await requireUser(env, request);
   if (targetId === u.id) throw bad("You can't follow yourself");
@@ -1768,24 +1710,70 @@ async function follow(env, request, targetId, on) {
   }
   return json({ ok: true, following: on });
 }
-__name(follow, "follow");
+var ownerView = (r) => ({
+  id: r.user_id,
+  business_name: r.owner_business || r.owner_name || "User",
+  avatar: r.owner_avatar,
+  avatar_url: mediaUrl(r.owner_avatar_key),
+  ref_code: r.owner_ref
+});
+var OWNER_COLS = `o.business_name AS owner_business, o.full_name AS owner_name, o.avatar AS owner_avatar,
+  o.avatar_key AS owner_avatar_key, o.ref_code AS owner_ref`;
+var postView = (r) => ({ ...itemView(r), source: void 0, note: void 0, owner: ownerView(r) });
+var PAGE = 20;
 async function feed(env, request) {
   const u = await requireUser(env, request);
-  const since = new Date(Date.now() - 30 * 864e5).toISOString();
-  const following = await env.DB.prepare("SELECT COUNT(*) AS n FROM follows WHERE follower_id = ?").bind(u.id).first();
-  const { results } = await env.DB.prepare(
-    `SELECT i.*, o.business_name AS owner_business, o.full_name AS owner_name, o.avatar AS owner_avatar, o.ref_code AS owner_ref
-     FROM follows f JOIN items i ON i.user_id = f.following_id JOIN users o ON o.id = i.user_id
-     WHERE f.follower_id = ? AND i.type IN ('col','lnk') AND i.deleted_at IS NULL AND i.created_at > ?
-       AND (i.expires_at IS NULL OR i.expires_at > ?) AND o.suspended = 0 AND o.deleted_at IS NULL
-     ORDER BY i.created_at DESC LIMIT 50`
-  ).bind(u.id, since, nowIso()).all();
+  const before = String(new URL(request.url).searchParams.get("before") || "9999").slice(0, 40);
+  const [following, rows] = await env.DB.batch([
+    env.DB.prepare("SELECT COUNT(*) AS n FROM follows WHERE follower_id = ?").bind(u.id),
+    env.DB.prepare(
+      `SELECT i.*, ${OWNER_COLS}
+       FROM follows f JOIN items i ON i.user_id = f.following_id JOIN users o ON o.id = i.user_id
+       WHERE f.follower_id = ? AND i.type IN ('col','lnk') AND i.deleted_at IS NULL AND i.created_at < ?
+         AND (i.expires_at IS NULL OR i.expires_at > ?) AND o.suspended = 0 AND o.deleted_at IS NULL
+       ORDER BY i.created_at DESC LIMIT ?`
+    ).bind(u.id, before, nowIso(), PAGE)
+  ]);
+  const items = rows.results.map(postView);
   return json({
-    following_count: following.n,
-    items: results.map((i) => ({ ...itemView(i), owner: { id: i.user_id, business_name: i.owner_business || i.owner_name, avatar: i.owner_avatar, ref_code: i.owner_ref } }))
+    following_count: following.results[0].n,
+    items,
+    next: items.length === PAGE ? items[items.length - 1].created_at : null
   });
 }
-__name(feed, "feed");
+async function explore(env, request) {
+  const viewer = await getSessionUser(env, request);
+  const page = Math.min(Math.max(parseInt(new URL(request.url).searchParams.get("page") || "0", 10) || 0, 0), 20);
+  const since = new Date(Date.now() - 30 * 864e5).toISOString();
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM (
+       SELECT i.*, ${OWNER_COLS}, COALESCE(s.n, 0) AS sales,
+              ROW_NUMBER() OVER (PARTITION BY i.user_id ORDER BY COALESCE(s.n, 0) DESC, i.created_at DESC) AS rn
+       FROM items i JOIN users o ON o.id = i.user_id
+       LEFT JOIN (SELECT item_id, COUNT(*) AS n FROM transactions WHERE status = 'succeeded' AND created_at > ?1 GROUP BY item_id) s
+              ON s.item_id = i.id
+       WHERE i.type = 'col' AND i.image_key IS NOT NULL AND i.deleted_at IS NULL
+         AND o.suspended = 0 AND o.deleted_at IS NULL AND i.user_id != ?2
+     ) WHERE rn <= 2
+     ORDER BY sales DESC, created_at DESC LIMIT ?3 OFFSET ?4`
+  ).bind(since, viewer?.id || "", PAGE, page * PAGE).all();
+  return json({ items: results.map(postView), next: results.length === PAGE ? page + 1 : null });
+}
+async function suggested(env, request) {
+  const viewer = await getSessionUser(env, request);
+  const { results } = await env.DB.prepare(
+    `SELECT o.id AS user_id, ${OWNER_COLS}, o.bio,
+       (SELECT COUNT(*) FROM follows WHERE following_id = o.id) AS followers,
+       (SELECT image_key FROM items WHERE user_id = o.id AND type = 'col' AND image_key IS NOT NULL AND deleted_at IS NULL
+          ORDER BY created_at DESC LIMIT 1) AS cover_key
+     FROM users o
+     WHERE o.suspended = 0 AND o.deleted_at IS NULL AND o.id != ?1
+       AND EXISTS (SELECT 1 FROM items WHERE user_id = o.id AND type IN ('col','lnk') AND deleted_at IS NULL)
+       AND NOT EXISTS (SELECT 1 FROM follows WHERE follower_id = ?1 AND following_id = o.id)
+     ORDER BY (cover_key IS NOT NULL) DESC, followers DESC, o.created_at DESC LIMIT 12`
+  ).bind(viewer?.id || "").all();
+  return json({ accounts: results.map((r) => ({ ...ownerView(r), bio: r.bio, followers: r.followers, cover: mediaUrl(r.cover_key) })) });
+}
 async function publicItem(env, request, id) {
   const i = await env.DB.prepare(
     `SELECT i.*, u.business_name, u.full_name FROM items i JOIN users u ON u.id = i.user_id
@@ -1794,14 +1782,13 @@ async function publicItem(env, request, id) {
   if (!i) throw notFound("This link may have been removed.");
   return json({ item: { ...itemView(i), source: void 0 }, business: i.business_name || i.full_name || "VyCheckout" });
 }
-__name(publicItem, "publicItem");
 async function publicProfile(env, request, code) {
   const p = await env.DB.prepare(
-    "SELECT id, full_name, business_name, avatar, bio, ref_code FROM users WHERE ref_code = ? AND deleted_at IS NULL AND suspended = 0"
+    "SELECT id, full_name, business_name, avatar, avatar_key, bio, ref_code FROM users WHERE ref_code = ? AND deleted_at IS NULL AND suspended = 0"
   ).bind(String(code).toUpperCase().slice(0, 12)).first();
   if (!p) throw notFound("Profile not found");
   const viewer = await getSessionUser(env, request);
-  const q = /* @__PURE__ */ __name((sql, ...a) => env.DB.prepare(sql).bind(...a), "q");
+  const q = (sql, ...a) => env.DB.prepare(sql).bind(...a);
   const [items, followers, following, isFollowing] = await env.DB.batch([
     q(`SELECT * FROM items WHERE user_id = ? AND type IN ('col','lnk') AND deleted_at IS NULL
          AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC LIMIT 100`, p.id, nowIso()),
@@ -1809,8 +1796,9 @@ async function publicProfile(env, request, code) {
     q("SELECT COUNT(*) AS n FROM follows WHERE follower_id = ?", p.id),
     q("SELECT COUNT(*) AS n FROM follows WHERE follower_id = ? AND following_id = ?", viewer?.id || "", p.id)
   ]);
+  const { avatar_key, ...profile } = p;
   return json({
-    profile: p,
+    profile: { ...profile, avatar_url: mediaUrl(avatar_key) },
     items: items.results.map((i) => ({ ...itemView(i), source: void 0 })),
     followers: followers.results[0].n,
     following: following.results[0].n,
@@ -1818,7 +1806,6 @@ async function publicProfile(env, request, code) {
     is_me: viewer?.id === p.id
   });
 }
-__name(publicProfile, "publicProfile");
 function publicConfig(env) {
   return json({
     paypal_client_id: env.PAYPAL_CLIENT_ID || null,
@@ -1833,7 +1820,6 @@ function publicConfig(env) {
     currencies: CURRENCIES
   });
 }
-__name(publicConfig, "publicConfig");
 async function apiUser(env, request) {
   const m = (request.headers.get("Authorization") || "").match(/^Bearer\s+(vy_live_[A-Za-z0-9_-]{20,80})$/);
   if (!m) throw unauthorized("Missing or invalid API key");
@@ -1846,7 +1832,6 @@ async function apiUser(env, request) {
   await env.DB.prepare("UPDATE api_keys SET last_used_at = ? WHERE id = ?").bind(nowIso(), row.key_id).run();
   return row;
 }
-__name(apiUser, "apiUser");
 async function apiV1(env, request, path) {
   const u = await apiUser(env, request);
   const base = appUrl(env, request);
@@ -1867,7 +1852,6 @@ async function apiV1(env, request, path) {
   }
   throw notFound("Unknown API endpoint");
 }
-__name(apiV1, "apiV1");
 
 // src/payouts.js
 var FAILED = ["FAILED", "RETURNED", "BLOCKED", "REFUNDED", "REVERSED", "DENIED", "CANCELED"];
@@ -1908,7 +1892,6 @@ async function sendPayout(env, request, id, ctx) {
   await audit(env, admin.id, "payout_sent", id, { batch: r.data.batch_header.payout_batch_id });
   return json({ ok: true, payout_status: "PENDING" });
 }
-__name(sendPayout, "sendPayout");
 async function refreshPayout(env, ctx, w) {
   if (!w.payout_batch_id) return w.payout_status;
   const r = await pp(env, `/v1/payments/payouts/${encodeURIComponent(w.payout_batch_id)}`);
@@ -1941,14 +1924,12 @@ async function refreshPayout(env, ctx, w) {
   }
   return status;
 }
-__name(refreshPayout, "refreshPayout");
 async function refreshPayoutRoute(env, request, id, ctx) {
   await requireAdmin(env, request);
   const w = await env.DB.prepare("SELECT * FROM withdrawals WHERE id = ?").bind(id).first();
   if (!w) throw notFound("Withdrawal not found");
   return json({ payout_status: await refreshPayout(env, ctx, w) });
 }
-__name(refreshPayoutRoute, "refreshPayoutRoute");
 async function payoutEvent(env, ctx, event) {
   if (!event.event_type?.startsWith("PAYMENT.PAYOUTS-ITEM.") && !event.event_type?.startsWith("PAYMENT.PAYOUTSBATCH.")) return false;
   const res = event.resource || {};
@@ -1957,14 +1938,12 @@ async function payoutEvent(env, ctx, event) {
   if (w) await refreshPayout(env, ctx, w);
   return true;
 }
-__name(payoutEvent, "payoutEvent");
 async function pollPayouts(env, ctx) {
   const { results } = await env.DB.prepare(
     "SELECT * FROM withdrawals WHERE payout_batch_id IS NOT NULL AND payout_status IN ('PENDING','ONHOLD','UNCLAIMED') AND status = 'approved' ORDER BY updated_at LIMIT 10"
   ).all();
   for (const w of results) await refreshPayout(env, ctx, w).catch((e) => console.error("payout poll", e));
 }
-__name(pollPayouts, "pollPayouts");
 
 // src/account.js
 async function checkPassword(env, u, password) {
@@ -1972,7 +1951,6 @@ async function checkPassword(env, u, password) {
   await rateLimit(env, `pw-check:${u.id}`, 10, 9e5);
   if (!await verifyPassword(String(password || ""), u.password_hash)) throw bad("Your current password is wrong", "bad_password");
 }
-__name(checkPassword, "checkPassword");
 async function changePassword(env, request) {
   const u = await requireUser(env, request);
   const b = await readJson(request);
@@ -1988,7 +1966,6 @@ async function changePassword(env, request) {
   if (u.email) await sendEmail(env, { to: u.email, subject: "Your VyCheckout password was changed", text: "Your password was just changed. If this wasn't you, reset your password now and contact support." });
   return json({ ok: true }, 200, { "Set-Cookie": await createSession(env, u.id) });
 }
-__name(changePassword, "changePassword");
 async function changeEmail(env, request, ctx) {
   const u = await requireUser(env, request);
   const b = await readJson(request);
@@ -2004,20 +1981,17 @@ async function changeEmail(env, request, ctx) {
   const fresh = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(u.id).first();
   return json({ user: selfView(env, fresh) });
 }
-__name(changeEmail, "changeEmail");
 async function updateSettings(env, request) {
   const u = await requireUser(env, request);
   const b = await readJson(request);
   if ("notify_sales" in b) await env.DB.prepare("UPDATE users SET notify_sales = ? WHERE id = ?").bind(b.notify_sales ? 1 : 0, u.id).run();
   return json({ ok: true });
 }
-__name(updateSettings, "updateSettings");
 async function logoutAll(env, request) {
   const u = await requireUser(env, request);
   await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(u.id).run();
   return json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
 }
-__name(logoutAll, "logoutAll");
 async function deleteAccount(env, request, ctx) {
   const u = await requireUser(env, request);
   const b = await readJson(request);
@@ -2047,10 +2021,9 @@ async function deleteAccount(env, request, ctx) {
   await audit(env, u.id, "account_self_delete", u.id);
   return json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
 }
-__name(deleteAccount, "deleteAccount");
 
 // src/admin.js
-var sums = /* @__PURE__ */ __name((rows) => Object.fromEntries(rows.filter((r) => r.total).map((r) => [r.currency, toMajor(r.total, r.currency)])), "sums");
+var sums = (rows) => Object.fromEntries(rows.filter((r) => r.total).map((r) => [r.currency, toMajor(r.total, r.currency)]));
 async function listWithdrawals(env, request) {
   await requireAdmin(env, request);
   const status = new URL(request.url).searchParams.get("status") || "pending";
@@ -2080,7 +2053,6 @@ async function listWithdrawals(env, request) {
     }))
   });
 }
-__name(listWithdrawals, "listWithdrawals");
 var ALLOWED_FROM = { approved: ["pending"], rejected: ["pending", "approved"], completed: ["approved"] };
 async function updateWithdrawal(env, request, id, ctx) {
   const admin = await requireAdmin(env, request);
@@ -2107,7 +2079,6 @@ Note: ${note}` : ""}`
   await audit(env, admin.id, `withdrawal_${b.status}`, id, { note });
   return json({ ok: true });
 }
-__name(updateWithdrawal, "updateWithdrawal");
 async function listUsers(env, request) {
   await requireAdmin(env, request);
   const [users, bals, held] = await env.DB.batch([
@@ -2135,7 +2106,6 @@ async function listUsers(env, request) {
     }))
   });
 }
-__name(listUsers, "listUsers");
 async function setSuspended(env, request, id) {
   const admin = await requireAdmin(env, request);
   const b = await readJson(request);
@@ -2147,7 +2117,6 @@ async function setSuspended(env, request, id) {
   await audit(env, admin.id, on ? "user_suspend" : "user_unsuspend", id);
   return json({ ok: true });
 }
-__name(setSuspended, "setSuspended");
 async function setHold(env, request, id) {
   const admin = await requireAdmin(env, request);
   const b = await readJson(request);
@@ -2161,7 +2130,6 @@ async function setHold(env, request, id) {
   await audit(env, admin.id, "hold_change", id, { days });
   return json({ ok: true });
 }
-__name(setHold, "setHold");
 async function adjustBalance(env, request, id) {
   const admin = await requireAdmin(env, request);
   const b = await readJson(request);
@@ -2175,7 +2143,6 @@ async function adjustBalance(env, request, id) {
   await audit(env, admin.id, "balance_adjust", id, { currency, amount: toMajor(amount, currency), note });
   return json({ ok: true });
 }
-__name(adjustBalance, "adjustBalance");
 async function deleteUser(env, request, id) {
   const admin = await requireAdmin(env, request);
   if (id === admin.id) throw bad("You can't delete yourself");
@@ -2192,7 +2159,6 @@ async function deleteUser(env, request, id) {
   await audit(env, admin.id, "user_delete", id);
   return json({ ok: true });
 }
-__name(deleteUser, "deleteUser");
 async function listTransactions(env, request) {
   await requireAdmin(env, request);
   const { results } = await env.DB.prepare(
@@ -2214,13 +2180,12 @@ async function listTransactions(env, request) {
     }))
   });
 }
-__name(listTransactions, "listTransactions");
 async function stats(env, request) {
   await requireAdmin(env, request);
   const since = /* @__PURE__ */ new Date();
   since.setUTCMonth(since.getUTCMonth() - 5, 1);
   since.setUTCHours(0, 0, 0, 0);
-  const q = /* @__PURE__ */ __name((sql) => env.DB.prepare(sql), "q");
+  const q = (sql) => env.DB.prepare(sql);
   const [vol, wds, users, monthly, top] = await env.DB.batch([
     q(`SELECT currency, COUNT(*) AS n, SUM(gross_minor) AS gross, SUM(fee_minor) AS fees, SUM(referral_minor) AS refs,
          COUNT(DISTINCT owner_id) AS sellers FROM transactions GROUP BY currency`),
@@ -2233,8 +2198,8 @@ async function stats(env, request) {
     q(`SELECT u.full_name, u.business_name, u.email, l.currency, SUM(l.amount_minor) AS earned FROM ledger l
        JOIN users u ON u.id = l.user_id WHERE l.kind IN ('sale','refund') GROUP BY l.user_id, l.currency ORDER BY earned DESC LIMIT 5`)
   ]);
-  const by = /* @__PURE__ */ __name((rows, f) => Object.fromEntries(rows.map((r) => [r.currency, toMajor(r[f] || 0, r.currency)])), "by");
-  const wdBy = /* @__PURE__ */ __name((status) => Object.fromEntries(wds.results.filter((w) => w.status === status).map((w) => [w.currency, toMajor(w.total, w.currency)])), "wdBy");
+  const by = (rows, f) => Object.fromEntries(rows.map((r) => [r.currency, toMajor(r[f] || 0, r.currency)]));
+  const wdBy = (status) => Object.fromEntries(wds.results.filter((w) => w.status === status).map((w) => [w.currency, toMajor(w.total, w.currency)]));
   return json({
     volume: by(vol.results, "gross"),
     fees: by(vol.results, "fees"),
@@ -2251,7 +2216,6 @@ async function stats(env, request) {
     top_earners: top.results.map((t) => ({ name: t.business_name || t.full_name || t.email, currency: t.currency, earned: toMajor(t.earned, t.currency) }))
   });
 }
-__name(stats, "stats");
 
 // src/alerts.js
 async function dailyDigest(env) {
@@ -2262,7 +2226,7 @@ async function dailyDigest(env) {
   if (last?.value === today) return;
   await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('digest_day', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").bind(today).run();
   const since = new Date(now.getTime() - 864e5).toISOString();
-  const q = /* @__PURE__ */ __name((sql, ...a) => env.DB.prepare(sql).bind(...a), "q");
+  const q = (sql, ...a) => env.DB.prepare(sql).bind(...a);
   const [pending, approved, failedHooks, mismatches, signups, volume, negative, failedPayouts] = await env.DB.batch([
     q("SELECT currency, COUNT(*) AS n, SUM(amount_minor) AS total, MIN(created_at) AS oldest FROM withdrawals WHERE status = 'pending' GROUP BY currency"),
     q("SELECT COUNT(*) AS n FROM withdrawals WHERE status = 'approved'"),
@@ -2290,7 +2254,6 @@ async function dailyDigest(env) {
   if (negative.results[0].n) lines.push(`\u26A0\uFE0F Merchants with a negative balance: ${negative.results[0].n}`);
   await alert(env, `Daily summary ${today}`, lines);
 }
-__name(dailyDigest, "dailyDigest");
 
 // src/index.js
 function checkCsrf(request, env) {
@@ -2300,7 +2263,6 @@ function checkCsrf(request, env) {
   if (origin && !allowed.includes(origin)) throw new HttpError(403, "Cross-site request blocked", "csrf");
   if (request.headers.get("X-Requested-With") !== "VyCheckout") throw new HttpError(403, "Missing request header", "csrf");
 }
-__name(checkCsrf, "checkCsrf");
 async function paypalWebhook(env, request, ctx) {
   const raw = await request.text();
   let event;
@@ -2317,7 +2279,6 @@ async function paypalWebhook(env, request, ctx) {
   await paypalOneTimeEvent(env, ctx, event) || await paypalSubscriptionEvent(env, ctx, event) || await payoutEvent(env, ctx, event);
   return new Response("ok");
 }
-__name(paypalWebhook, "paypalWebhook");
 async function stripeWebhook(env, request, ctx) {
   const raw = await request.text();
   if (!await verifyStripeSignature(env, request.headers.get("Stripe-Signature"), raw)) {
@@ -2328,7 +2289,6 @@ async function stripeWebhook(env, request, ctx) {
   await stripeOneTimeEvent(env, ctx, event) || await stripeSubscriptionEvent(env, ctx, event);
   return new Response("ok");
 }
-__name(stripeWebhook, "stripeWebhook");
 async function route(request, env, ctx) {
   const url = new URL(request.url);
   const p = url.pathname;
@@ -2339,6 +2299,7 @@ async function route(request, env, ctx) {
   if (m === "GET" && p === "/api/auth/google/start") return googleStart(env, request);
   if (m === "GET" && p === "/api/auth/google/callback") return googleCallback(env, request, ctx);
   if (m === "GET" && p === "/api/auth/verify") return verifyEmail(env, request);
+  if ((m === "GET" || m === "HEAD") && p.startsWith("/api/media/")) return serve(env, request, p.slice("/api/media/".length));
   if (m !== "GET" && m !== "HEAD") checkCsrf(request, env);
   switch (`${m} ${p}`) {
     case "GET /api/config":
@@ -2353,6 +2314,12 @@ async function route(request, env, ctx) {
       return dashboard(env, request);
     case "GET /api/feed":
       return feed(env, request);
+    case "GET /api/explore":
+      return explore(env, request);
+    case "GET /api/suggested":
+      return suggested(env, request);
+    case "POST /api/media":
+      return upload(env, request);
     case "POST /api/auth/signup":
       return signup(env, request, ctx);
     case "POST /api/auth/login":
@@ -2436,7 +2403,6 @@ async function route(request, env, ctx) {
   }
   return json({ error: "Not found" }, 404);
 }
-__name(route, "route");
 var index_default = {
   async fetch(request, env, ctx) {
     const p = new URL(request.url).pathname;
@@ -2451,13 +2417,13 @@ var index_default = {
   },
   // Every 5 minutes: retry merchant webhooks, check PayPal payouts, daily admin summary, tidy up
   async scheduled(event, env, ctx) {
-    const job = /* @__PURE__ */ __name(async (name, fn) => {
+    const job = async (name, fn) => {
       try {
         await fn();
       } catch (e) {
         console.error(`cron ${name}`, e?.stack || e);
       }
-    }, "job");
+    };
     ctx.waitUntil((async () => {
       await job("webhooks", () => retryDueWebhooks(env));
       await job("payouts", () => pollPayouts(env, ctx));
@@ -2478,4 +2444,3 @@ var index_default = {
 export {
   index_default as default
 };
-//# sourceMappingURL=index.js.map

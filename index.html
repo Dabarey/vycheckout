@@ -437,6 +437,48 @@ tbody tr:hover td{background:var(--bg);}
 .wall-badge.col{background:#dbeafe;color:#1e40af;}
 .wall-badge.lnk{background:#dcfce7;color:#166534;}
 .wall-badge.sub{background:#f3e8ff;color:#6b21a8;}
+/* Instagram-style feed */
+.feed-tabs{display:flex;margin:0 0 .8rem;border-bottom:1px solid var(--bord);}
+.feed-tab{flex:1;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;padding:.6rem;font-size:.8rem;font-weight:700;color:var(--ink3);cursor:pointer;font-family:inherit;}
+.feed-tab.on{color:var(--ink1);border-bottom-color:var(--ink1);}
+.sugg-hd{font-size:.72rem;font-weight:700;color:var(--ink2);margin:.1rem 0 .5rem;}
+.sugg{display:flex;gap:.6rem;overflow-x:auto;padding:0 0 .9rem;scrollbar-width:none;}
+.sugg::-webkit-scrollbar{display:none;}
+.sugg-card{flex:0 0 128px;background:var(--surf);border:1px solid var(--bord);border-radius:12px;padding:.8rem .55rem .7rem;text-align:center;display:flex;flex-direction:column;align-items:center;}
+.sugg-name{font-size:.76rem;font-weight:700;color:var(--ink1);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;margin-top:.45rem;}
+.sugg-sub{font-size:.64rem;color:var(--ink3);margin-bottom:.55rem;}
+.sugg-card .wall-follow-btn{width:100%;}
+.av{border-radius:50%;background:var(--al);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;cursor:pointer;line-height:1;}
+.av img{width:100%;height:100%;object-fit:cover;display:block;}
+.post-media{position:relative;aspect-ratio:1/1;background:var(--al);cursor:pointer;overflow:hidden;}
+.post-media img{width:100%;height:100%;object-fit:cover;display:block;}
+.post-text{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center;color:#fff;}
+.post-text b{font-size:1.25rem;line-height:1.3;margin-bottom:.45rem;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.post-text span{font-size:1.6rem;font-weight:800;letter-spacing:-.03em;}
+.post-price{position:absolute;left:.7rem;bottom:.7rem;background:rgba(0,0,0,.66);color:#fff;font-size:.8rem;font-weight:800;padding:.3rem .65rem;border-radius:20px;}
+.post-foot{padding:.75rem 1rem .9rem;}
+.post-cap{font-size:.8rem;color:var(--ink2);line-height:1.5;margin-bottom:.7rem;word-break:break-word;}
+.post-cap b{color:var(--ink1);margin-right:.3rem;cursor:pointer;}
+.feed-more{display:block;margin:.9rem auto 0;}
+.wall-wrap,.feed-tabs,#sugg-wrap{max-width:560px;}
+.gr0{background:linear-gradient(135deg,#2563eb,#7c3aed);}
+.gr1{background:linear-gradient(135deg,#db2777,#f59e0b);}
+.gr2{background:linear-gradient(135deg,#059669,#0ea5e9);}
+.gr3{background:linear-gradient(135deg,#7c3aed,#db2777);}
+.gr4{background:linear-gradient(135deg,#0f172a,#475569);}
+/* Profile photo grid */
+.ig-grid.g3{grid-template-columns:repeat(3,1fr);gap:3px;padding:0 0 1rem;}
+.ig-tile{position:relative;aspect-ratio:1/1;overflow:hidden;cursor:pointer;background:var(--al);}
+.ig-tile img{width:100%;height:100%;object-fit:cover;display:block;}
+.ig-tile .post-text{padding:.5rem;}
+.ig-tile .post-text b{font-size:.72rem;margin-bottom:.2rem;-webkit-line-clamp:2;}
+.ig-tile .post-text span{font-size:.85rem;}
+.ig-tile-price{position:absolute;right:.3rem;bottom:.3rem;background:rgba(0,0,0,.62);color:#fff;font-size:.62rem;font-weight:800;padding:.12rem .42rem;border-radius:10px;}
+/* Photo picker */
+.photo-pick{display:flex;align-items:center;gap:.75rem;}
+.photo-thumb{width:64px;height:64px;border-radius:10px;background:var(--al) center/cover no-repeat;border:1px dashed var(--bord);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--ink3);flex-shrink:0;}
+.photo-hint{font-size:.68rem;color:var(--ink3);margin-top:.3rem;line-height:1.4;}
+.co-img{display:block;width:100%;aspect-ratio:1/1;max-height:360px;object-fit:cover;background:var(--al);}
 /* Stats bar compact */
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.8rem;}
 .stat-mini{background:var(--surf);border:1px solid var(--bord);border-radius:10px;padding:.6rem .5rem;text-align:center;}
@@ -1323,10 +1365,15 @@ async function renderUserDash() {
       </div>
 
       <!-- Feed -->
-      <div class="home-feed-hd"><div class="home-feed-bar"></div>Feed</div>
+      <div class="feed-tabs" id="feed-tabs">
+        <button class="feed-tab" data-tab="following" onclick="loadWallFeed('following')">Following</button>
+        <button class="feed-tab" data-tab="discover" onclick="loadWallFeed('discover')">Discover</button>
+      </div>
+      <div id="sugg-wrap"></div>
       <div class="wall-wrap" id="wall-feed">
         <div class="wall-empty"><div class="wall-empty-ic">🏠</div><div class="wall-empty-msg">Loading feed…</div></div>
       </div>
+      <button class="bxs feed-more" id="feed-more" style="display:none" onclick="loadMoreFeed(this)">Load more</button>
     </div>
     <!-- COLLECTIONS -->
     <div class="panel" id="p-cols">${listBar('p-cols')}<div class="pt">Collections</div><div class="ps">One-time payment campaigns</div><div class="cg" id="cols-g"><div class="empty"><div class="empty-ic">📋</div><p>Loading…</p></div></div></div>
@@ -1352,6 +1399,7 @@ async function renderUserDash() {
               <option value="JPY">🇯🇵 JPY</option><option value="MXN">🇲🇽 MXN</option><option value="HKD">🇭🇰 HKD</option>
             </select></div>
           </div>
+          <div class="fg"><label>Photo (optional)</label><div class="photo-pick"><div class="photo-thumb" id="nc-ph-th">📷</div><div><button type="button" class="bxs" onclick="pickPhoto('nc')">Add photo</button> <button type="button" class="bxs rd" id="nc-ph-rm" style="display:none" onclick="clearPhoto('nc')">Remove</button><div class="photo-hint">Shown in your followers’ feed and on the payment page. Collections with a photo can also appear in Discover.</div></div></div></div>
           <div class="fg"><label>Description</label><textarea id="nc-d" placeholder="What is this for?"></textarea></div>
           <div class="fee-note" id="nc-fee"></div>
           <button class="ba" id="nc-btn" onclick="createCol()">Save Collection</button>
@@ -1410,6 +1458,7 @@ async function renderUserDash() {
             <option value="AUD">🇦🇺 AUD</option><option value="CAD">🇨🇦 CAD</option><option value="SGD">🇸🇬 SGD</option>
             <option value="JPY">🇯🇵 JPY</option><option value="MXN">🇲🇽 MXN</option><option value="HKD">🇭🇰 HKD</option>
           </select></div>
+          <div class="fg"><label>Photo (optional)</label><div class="photo-pick"><div class="photo-thumb" id="nl-ph-th">📷</div><div><button type="button" class="bxs" onclick="pickPhoto('nl')">Add photo</button> <button type="button" class="bxs rd" id="nl-ph-rm" style="display:none" onclick="clearPhoto('nl')">Remove</button><div class="photo-hint">Shown in your followers’ feed and on the payment page.</div></div></div></div>
           <div class="fg"><label>Note (optional)</label><textarea id="nl-no" placeholder="Extra context for payer"></textarea></div>
           <div class="fee-note" id="nl-fee"></div>
           <button class="ba" id="nl-btn" onclick="createLink()">Save &amp; Get Link</button>
@@ -1627,7 +1676,7 @@ async function loadUserData() {
 
   // Home profile card
   const profUrl = location.origin + location.pathname + '?u=' + (currentProfile.ref_code || '');
-  if (g('pc-avatar')) g('pc-avatar').textContent = currentProfile.avatar || '👤';
+  setAvatar(g('pc-avatar'), currentProfile.avatar_url, currentProfile.avatar);
   if (g('pc-biz'))    g('pc-biz').textContent    = currentProfile.business_name || currentProfile.full_name || 'My Business';
   if (g('pc-bio'))    g('pc-bio').textContent    = currentProfile.bio || 'Tap Edit to add a bio';
   if (g('pc-url')) {
@@ -1670,97 +1719,204 @@ function renderHome(d) {
   loadWallFeed();
 }
 
-// Track follow state cache for wall
-const _wallFollowing = {};
+// ── Avatars, photos and Instagram-style posts ──
+const PHOTO_PREFIX = { col: 'nc', sub: 'ns', lnk: 'nl' };
+const _photo = {};            // create-form prefix -> { key, url } of the uploaded photo
+const _wallFollowing = {};    // user id -> true when the viewer follows them
+let _feedTab = null, _feedNext = null, _feedSeq = 0;
 
-async function loadWallFeed() {
+// Profile picture if there is one, otherwise the emoji
+function setAvatar(el, url, emoji) {
+  if (!el) return;
+  el.textContent = '';
+  if (url) {
+    const im = document.createElement('img');
+    im.src = url; im.alt = ''; im.loading = 'lazy';
+    im.onerror = function() { el.textContent = emoji || '👤'; };
+    im.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;display:block';
+    el.appendChild(im);
+  } else {
+    el.textContent = emoji || '👤';
+  }
+}
+function avatarNode(owner, size) {
+  const el = document.createElement('div');
+  el.className = 'av';
+  el.style.cssText = 'width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.5) + 'px';
+  setAvatar(el, owner.avatar_url, owner.avatar);
+  el.onclick = function() { location.href = '?u=' + encodeURIComponent(owner.ref_code || ''); };
+  return el;
+}
+function gradClass(id) {
+  let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return 'gr' + (h % 5);
+}
+function priceLabel(item) { return item.custom_amount ? 'Any amount' : fmtAmt(item.amount, item.currency); }
+// The square part of a post: the photo, or the name and price on a colour background
+function postVisual(item, priceClass) {
+  const frag = document.createDocumentFragment();
+  if (item.image) {
+    const im = document.createElement('img');
+    im.src = item.image; im.alt = item.name; im.loading = 'lazy';
+    frag.appendChild(im);
+    const p = document.createElement('div');
+    p.className = priceClass; p.textContent = priceLabel(item);
+    frag.appendChild(p);
+  } else {
+    const t = document.createElement('div');
+    t.className = 'post-text ' + gradClass(item.id);
+    const b = document.createElement('b'); b.textContent = item.name;
+    const sp = document.createElement('span'); sp.textContent = priceLabel(item);
+    t.appendChild(b); t.appendChild(sp);
+    frag.appendChild(t);
+  }
+  return frag;
+}
+function followButton(ownerId) {
+  const b = document.createElement('button');
+  const on = !!_wallFollowing[ownerId];
+  b.className = on ? 'wall-follow-btn following' : 'wall-follow-btn';
+  b.textContent = on ? '✓ Following' : '+ Follow';
+  b.setAttribute('data-uid', ownerId);
+  b.onclick = function() { wallToggleFollow(ownerId); };
+  return b;
+}
+
+function renderPost(item, showFollow) {
+  const owner = item.owner || {};
+  const profUrl = '?u=' + encodeURIComponent(owner.ref_code || '');
+  const payUrl = coUrl(item.type, item.id);
+
+  const card = document.createElement('div');
+  card.className = 'wall-card';
+
+  const head = document.createElement('div');
+  head.className = 'wall-card-head';
+  head.appendChild(avatarNode(owner, 36));
+  const meta = document.createElement('div');
+  meta.className = 'wall-meta';
+  const biz = document.createElement('div');
+  biz.className = 'wall-biz'; biz.textContent = owner.business_name || 'User';
+  biz.onclick = function() { location.href = profUrl; };
+  const time = document.createElement('div');
+  time.className = 'wall-time'; time.textContent = fd(item.created_at);
+  meta.appendChild(biz); meta.appendChild(time);
+  head.appendChild(meta);
+  if (showFollow && owner.id !== (currentUser && currentUser.id)) head.appendChild(followButton(owner.id));
+
+  const media = document.createElement('div');
+  media.className = 'post-media';
+  media.appendChild(postVisual(item, 'post-price'));
+  media.onclick = function() { location.href = payUrl; };
+
+  const foot = document.createElement('div');
+  foot.className = 'post-foot';
+  const cap = document.createElement('div');
+  cap.className = 'post-cap';
+  const capName = document.createElement('b');
+  capName.textContent = owner.business_name || 'User';
+  capName.onclick = function() { location.href = profUrl; };
+  cap.appendChild(capName);
+  cap.appendChild(document.createTextNode(item.name + (item.description ? ' — ' + item.description : '')));
+  const pay = document.createElement('button');
+  pay.className = 'wall-pay-btn';
+  pay.textContent = 'Pay ' + priceLabel(item);
+  pay.onclick = function() { location.href = payUrl; };
+  foot.appendChild(cap); foot.appendChild(pay);
+
+  card.appendChild(head); card.appendChild(media); card.appendChild(foot);
+  return card;
+}
+
+function feedEmpty(icon, msg, sub, action) {
+  return '<div class="wall-empty"><div class="wall-empty-ic">' + icon + '</div><div class="wall-empty-msg">' + msg + '</div>' +
+    (sub ? '<div class="wall-empty-sub">' + sub + '</div>' : '') + (action ? '<div style="margin-top:.8rem">' + action + '</div>' : '') + '</div>';
+}
+
+// Home feed. tab: 'following' or 'discover'. With no tab, opens Following, or Discover if you follow nobody yet.
+async function loadWallFeed(tab) {
   if (!currentUser) return;
   const feed = g('wall-feed');
   if (!feed) return;
-  feed.innerHTML = '<div class="wall-empty"><div class="wall-empty-ic">⏳</div><div class="wall-empty-msg">Loading feed…</div></div>';
+  const seq = ++_feedSeq;
+  if (tab) _feedTab = tab;
+  feed.innerHTML = feedEmpty('⏳', 'Loading…');
+  if (g('feed-more')) g('feed-more').style.display = 'none';
 
   let d;
-  try { d = await api('GET', '/api/feed'); }
-  catch (e) { feed.innerHTML = '<div class="wall-empty"><div class="wall-empty-msg">Could not load your feed.</div></div>'; return; }
-
-  if (!d.following_count) {
-    feed.innerHTML = '<div class="wall-empty"><div class="wall-empty-ic">👥</div><div class="wall-empty-msg">Your feed is empty</div><div class="wall-empty-sub">Follow other users on their profile page to see their collections here.</div></div>';
-    return;
-  }
-  if (!d.items.length) {
-    feed.innerHTML = '<div class="wall-empty"><div class="wall-empty-ic">📭</div><div class="wall-empty-msg">No posts yet</div><div class="wall-empty-sub">People you follow have not created any collections yet.</div></div>';
-    return;
-  }
-
-  feed.innerHTML = '';
-  d.items.forEach(function(item) {
-    const owner = item.owner || {};
-    _wallFollowing[owner.id] = true;
-    const profUrl = '?u=' + encodeURIComponent(owner.ref_code || '');
-    const payUrl = '?pay=' + item.type + ':' + encodeURIComponent(item.id);
-
-    const card = document.createElement('div');
-    card.className = 'wall-card';
-    const head = document.createElement('div');
-    head.className = 'wall-card-head';
-
-    const avEl = document.createElement('div');
-    avEl.className = 'wall-av';
-    avEl.textContent = owner.avatar || '👤';
-    avEl.onclick = function() { location.href = profUrl; };
-
-    const meta = document.createElement('div');
-    meta.className = 'wall-meta';
-    const bizEl = document.createElement('div');
-    bizEl.className = 'wall-biz';
-    bizEl.textContent = owner.business_name || 'User';
-    bizEl.onclick = function() { location.href = profUrl; };
-    const timeEl = document.createElement('div');
-    timeEl.className = 'wall-time';
-    timeEl.textContent = fd(item.created_at);
-    meta.appendChild(bizEl);
-    meta.appendChild(timeEl);
-
-    const followBtn = document.createElement('button');
-    followBtn.className = 'wall-follow-btn following';
-    followBtn.textContent = '✓ Following';
-    followBtn.setAttribute('data-uid', owner.id);
-    followBtn.onclick = function() { wallToggleFollow(owner.id); };
-
-    head.appendChild(avEl);
-    head.appendChild(meta);
-    head.appendChild(followBtn);
-
-    const body = document.createElement('div');
-    body.className = 'wall-body';
-    const badge = document.createElement('div');
-    badge.className = 'wall-badge ' + item.type;
-    badge.textContent = item.type === 'col' ? 'Collection' : 'Pay Link';
-    const nameEl = document.createElement('div');
-    nameEl.className = 'wall-item-name';
-    nameEl.textContent = item.name;
-    body.appendChild(badge);
-    body.appendChild(nameEl);
-    if (item.description) {
-      const desc = document.createElement('div');
-      desc.className = 'wall-item-desc';
-      desc.textContent = item.description;
-      body.appendChild(desc);
+  try {
+    if (_feedTab !== 'discover') {
+      d = await api('GET', '/api/feed');
+      _feedTab = (!_feedTab && !d.following_count) ? 'discover' : 'following';
     }
-    const priceEl = document.createElement('div');
-    priceEl.className = 'wall-item-price';
-    priceEl.textContent = item.custom_amount ? 'Any amount' : fmtAmt(item.amount, item.currency);
-    const payBtn = document.createElement('button');
-    payBtn.className = 'wall-pay-btn';
-    payBtn.textContent = 'Pay Now';
-    payBtn.onclick = function() { location.href = payUrl; };
-    body.appendChild(priceEl);
-    body.appendChild(payBtn);
+    if (_feedTab === 'discover') d = await api('GET', '/api/explore');
+  } catch (e) {
+    if (seq === _feedSeq) feed.innerHTML = feedEmpty('⚠️', 'Could not load the feed.', '', '<button class="bxs" onclick="loadWallFeed()">Try again</button>');
+    return;
+  }
+  if (seq !== _feedSeq) return;
 
-    card.appendChild(head);
-    card.appendChild(body);
-    feed.appendChild(card);
+  document.querySelectorAll('#feed-tabs .feed-tab').forEach(function(b) { b.classList.toggle('on', b.getAttribute('data-tab') === _feedTab); });
+  loadSuggested();
+
+  const discover = _feedTab === 'discover';
+  if (!discover) d.items.forEach(function(it) { if (it.owner) _wallFollowing[it.owner.id] = true; });
+  _feedNext = d.next;
+  feed.innerHTML = '';
+  if (!d.items.length) {
+    feed.innerHTML = discover
+      ? feedEmpty('✨', 'Nothing in Discover yet', 'Collections with a photo show up here. Add a photo to yours so others can find it.')
+      : (d.following_count
+        ? feedEmpty('📭', 'No posts yet', 'People you follow have not posted anything yet.')
+        : feedEmpty('👥', 'You don’t follow anyone yet', 'Follow sellers from Discover or the suggestions above to see their posts here.',
+            '<button class="bxs" onclick="loadWallFeed(\'discover\')">Open Discover</button>'));
+    return;
+  }
+  d.items.forEach(function(it) { feed.appendChild(renderPost(it, discover)); });
+  if (g('feed-more')) g('feed-more').style.display = d.next != null ? '' : 'none';
+}
+
+async function loadMoreFeed(btn) {
+  if (_feedNext == null) return;
+  const seq = _feedSeq;
+  btn.disabled = true; btn.textContent = 'Loading…';
+  const discover = _feedTab === 'discover';
+  const d = await apiToast('GET', discover ? '/api/explore?page=' + _feedNext : '/api/feed?before=' + encodeURIComponent(_feedNext));
+  btn.disabled = false; btn.textContent = 'Load more';
+  if (!d || seq !== _feedSeq) return;
+  _feedNext = d.next;
+  d.items.forEach(function(it) {
+    if (!discover && it.owner) _wallFollowing[it.owner.id] = true;
+    g('wall-feed').appendChild(renderPost(it, discover));
   });
+  btn.style.display = d.next != null ? '' : 'none';
+}
+
+// "Suggested for you" row of accounts to follow
+async function loadSuggested() {
+  const wrap = g('sugg-wrap');
+  if (!wrap) return;
+  let d;
+  try { d = await api('GET', '/api/suggested'); } catch (e) { return; }
+  wrap.innerHTML = '';
+  if (!d.accounts.length) return;
+  const hd = document.createElement('div');
+  hd.className = 'sugg-hd'; hd.textContent = 'Suggested for you';
+  const row = document.createElement('div');
+  row.className = 'sugg';
+  d.accounts.forEach(function(a) {
+    const c = document.createElement('div');
+    c.className = 'sugg-card';
+    c.appendChild(avatarNode(a, 56));
+    const n = document.createElement('div');
+    n.className = 'sugg-name'; n.textContent = a.business_name || 'User';
+    n.onclick = function() { location.href = '?u=' + encodeURIComponent(a.ref_code || ''); };
+    const sub = document.createElement('div');
+    sub.className = 'sugg-sub'; sub.textContent = a.followers + (a.followers === 1 ? ' follower' : ' followers');
+    c.appendChild(n); c.appendChild(sub); c.appendChild(followButton(a.id));
+    row.appendChild(c);
+  });
+  wrap.appendChild(hd); wrap.appendChild(row);
 }
 
 async function wallToggleFollow(userId) {
@@ -1777,7 +1933,69 @@ async function wallToggleFollow(userId) {
     b.textContent = wasFollowing ? '+ Follow' : '✓ Following';
   });
   toast(wasFollowing ? 'Unfollowed' : 'Following! ✓', 'ok');
-  setTimeout(loadWallFeed, 500);
+}
+
+// ── Photo uploads: the browser shrinks the photo (and drops its location data) before sending it
+function pickPhoto(prefix) {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = function() { if (inp.files && inp.files[0]) uploadPhoto(prefix, inp.files[0]); };
+  inp.click();
+}
+async function shrinkImage(file, max) {
+  if (file.type && !/^image\//.test(file.type)) throw new Error('Choose a photo (JPG, PNG or WebP).');
+  if (file.size > 30 * 1024 * 1024) throw new Error('That photo is too large.');
+  let src;
+  try { src = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch (e) {
+    src = await new Promise(function(resolve, reject) {
+      const im = new Image();
+      im.onload = function() { resolve(im); };
+      im.onerror = function() { reject(new Error('Could not read that photo. Try a JPG or PNG.')); };
+      im.src = URL.createObjectURL(file);
+    });
+  }
+  const w = src.width, h = src.height, k = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(src, 0, 0, c.width, c.height);
+  return new Promise(function(resolve, reject) {
+    c.toBlob(function(b) { b ? resolve(b) : reject(new Error('Could not process that photo.')); }, 'image/jpeg', 0.85);
+  });
+}
+async function uploadImage(file, kind) {
+  const blob = await shrinkImage(file, kind === 'avatar' ? 480 : 1080);
+  let res;
+  try {
+    res = await fetch('/api/media?kind=' + kind, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'VyCheckout', 'Content-Type': 'image/jpeg' }, body: blob,
+    });
+  } catch (e) { throw new Error('Network error — check your connection and try again'); }
+  let d = null; try { d = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error((d && d.error) || 'Upload failed (' + res.status + ')');
+  return d;
+}
+async function uploadPhoto(prefix, file) {
+  const th = g(prefix + '-ph-th');
+  if (th) { th.style.backgroundImage = ''; th.textContent = '⏳'; }
+  try {
+    const d = await uploadImage(file, 'post');
+    _photo[prefix] = d;
+    if (th) { th.textContent = ''; th.style.backgroundImage = 'url("' + d.url + '")'; }
+    if (g(prefix + '-ph-rm')) g(prefix + '-ph-rm').style.display = '';
+  } catch (e) {
+    clearPhoto(prefix);
+    toast(e.message, 'er');
+  }
+}
+function clearPhoto(prefix) {
+  delete _photo[prefix];
+  const th = g(prefix + '-ph-th');
+  if (th) { th.style.backgroundImage = ''; th.textContent = '📷'; }
+  if (g(prefix + '-ph-rm')) g(prefix + '-ph-rm').style.display = 'none';
 }
 
 // Items rendered in the dashboard, keyed "type:id", so buttons never embed names inside inline JS.
@@ -2069,7 +2287,9 @@ function quickNav(id) {
 // ═══════════════════════════════════════════════
 // Saves an item. If the create form already saved this exact item for a preview payment, reuses it.
 async function saveItem(type, body, btnId, btnText) {
-  const sig = [body.name, body.amount, body.currency].join('|');
+  const ph = _photo[PHOTO_PREFIX[type]];
+  if (ph) body.image_key = ph.key;
+  const sig = [body.name, body.amount, body.currency, body.image_key || ''].join('|');
   const pre = _previewSaved[type];
   let item;
   if (pre && pre.sig === sig) {
@@ -2094,6 +2314,7 @@ async function createCol() {
   if (!item) return;
   showCreatedLink('Collection created!', name, coUrl('col', item.id));
   ['nc-n', 'nc-a', 'nc-d'].forEach(id => { if (g(id)) g(id).value = ''; });
+  clearPhoto('nc');
   if (g('nc-pay-box')) g('nc-pay-box').style.display = 'none';
   await loadUserData();
 }
@@ -2121,6 +2342,7 @@ async function createLink() {
   if (!item) return;
   showCreatedLink('Payment link ready!', name, coUrl('lnk', item.id));
   ['nl-n', 'nl-a', 'nl-no'].forEach(id => { if (g(id)) g(id).value = ''; });
+  clearPhoto('nl');
   if (g('nl-pay-box')) g('nl-pay-box').style.display = 'none';
   await loadUserData();
 }
@@ -2463,6 +2685,7 @@ async function initCheckout(type, id) {
   const cycle = (item.cycle || 'MONTHLY').toLowerCase();
 
   g('co-card').innerHTML = `
+    ${item.image ? `<img class="co-img" src="${esc(item.image)}" alt="">` : ''}
     <div class="co-hd">
       <div class="mer">${esc(business)}</div>
       <h2>${esc(item.name)}</h2>
@@ -3026,9 +3249,11 @@ function _showPreview(boxId, containerId, titleId, nameVal, amtVal, curVal, sour
 }
 
 async function ensurePreviewItem(type, item) {
-  const sig = [item.name, item.amount, item.currency].join('|');
+  const ph = _photo[PHOTO_PREFIX[type]];
+  const sig = [item.name, item.amount, item.currency, ph ? ph.key : ''].join('|');
   if (_previewSaved[type] && _previewSaved[type].sig === sig) return _previewSaved[type].id;
   const body = { type, name: item.name, amount: item.amount, currency: item.currency };
+  if (ph) body.image_key = ph.key;
   if (type === 'col') body.description = gi('nc-d');
   if (type === 'sub') { body.description = gi('ns-d'); body.cycle = gi('ns-cy') || 'MONTHLY'; }
   if (type === 'lnk') { body.note = gi('nl-no'); body.expires_days = parseInt(gi('nl-e') || '0', 10); }
@@ -3044,6 +3269,7 @@ async function afterPreviewPaid(type, receipt) {
   const pre = { col: 'nc', sub: 'ns', lnk: 'nl' }[type];
   [pre + '-n', pre + '-a', pre + '-d', pre + '-no'].forEach(id => { if (g(id)) g(id).value = ''; });
   if (g(pre + '-pay-box')) g(pre + '-pay-box').style.display = 'none';
+  clearPhoto(pre);
   await loadUserData();
   quickNav({ col: 'p-cols', sub: 'p-subs', lnk: 'p-lnks' }[type]);
 }
@@ -3382,7 +3608,7 @@ document.addEventListener('keydown', e => {
         <div class="ig-av" id="ig-av">👤</div>
       </div>
       <div class="ig-stats">
-        <div class="ig-stat"><div class="ig-stat-n" id="ig-posts">0</div><div class="ig-stat-l">links</div></div>
+        <div class="ig-stat"><div class="ig-stat-n" id="ig-posts">0</div><div class="ig-stat-l">posts</div></div>
         <div class="ig-stat"><div class="ig-stat-n" id="ig-followers">0</div><div class="ig-stat-l">followers</div></div>
         <div class="ig-stat"><div class="ig-stat-n" id="ig-following">0</div><div class="ig-stat-l">following</div></div>
       </div>
@@ -3402,8 +3628,8 @@ document.addEventListener('keydown', e => {
     </div>
 
     <!-- Grid -->
-    <div class="ig-section-label">PAYMENT LINKS</div>
-    <div class="ig-grid" id="ig-grid"></div>
+    <div class="ig-section-label">POSTS</div>
+    <div class="ig-grid g3" id="ig-grid"></div>
 
     <div class="ig-powered">Powered by <a href="/">VyCheckout</a> · <a href="/?ref=" id="ig-ref-link">Join &amp; earn 1%</a></div>
 
@@ -3422,8 +3648,15 @@ document.addEventListener('keydown', e => {
       <label>Bio <span style="color:var(--ink3);font-weight:400">(optional)</span></label>
       <input type="text" id="ep-bio" placeholder="One line about what you do" maxlength="120"/>
     </div>
+    <div class="fg" style="margin-bottom:.7rem">
+      <label>Profile photo</label>
+      <div class="photo-pick">
+        <div class="av" id="ep-photo" style="width:64px;height:64px;font-size:30px;cursor:default">👤</div>
+        <div><button type="button" class="bxs" onclick="pickAvatarPhoto()">Upload photo</button> <button type="button" class="bxs rd" id="ep-photo-rm" style="display:none" onclick="removeAvatarPhoto()">Remove</button></div>
+      </div>
+    </div>
     <div class="fg" style="margin-bottom:.9rem">
-      <label>Avatar</label>
+      <label>Or pick an emoji</label>
       <div class="ep-emoji-grid" id="ep-emoji-grid"></div>
     </div>
     <button class="ba" onclick="saveProfile()" id="ep-save-btn">Save Profile</button>
@@ -3454,7 +3687,7 @@ async function initProfile(refCode) {
   window._currentProfileCode = prof.ref_code; // Share button shares THIS profile, not the viewer's
 
   const biz = prof.business_name || prof.full_name || 'VyCheckout User';
-  document.getElementById('ig-av').textContent = prof.avatar || '👤';
+  setAvatar(document.getElementById('ig-av'), prof.avatar_url, prof.avatar);
   document.getElementById('ig-bio-name').textContent = biz;
   document.getElementById('ig-topbar-name').textContent = biz;
   const bioEl = document.getElementById('ig-bio-text');
@@ -3485,25 +3718,16 @@ async function initProfile(refCode) {
   const grid = document.getElementById('ig-grid');
   grid.innerHTML = '';
   if (items.length === 0) {
-    grid.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:var(--ink3);grid-column:1/-1">No payment links yet.</div>';
+    grid.innerHTML = '<div style="text-align:center;padding:3rem 1rem;color:var(--ink3);grid-column:1/-1">No posts yet.</div>';
     return;
   }
   items.forEach(function(item) {
-    const url = coUrl(item.type, item.id);
-    const isCol = item.type === 'col';
-    const sub = item.description || item.note || '';
-    const card = document.createElement('div');
-    card.className = 'ig-card';
-    card.innerHTML =
-      '<div class="ig-card-icon">' + (isCol ? '📋' : '🔗') + '</div>' +
-      '<div class="ig-card-info">' +
-        '<div class="ig-card-name">' + esc(item.name) + '</div>' +
-        (sub ? '<div class="ig-card-desc">' + esc(sub) + '</div>' : '') +
-        '<span class="ig-card-badge ' + (isCol ? 'col' : 'lnk') + '">' + (isCol ? 'Collection' : 'Pay Link') + '</span>' +
-      '</div>' +
-      '<div class="ig-card-amt">' + (item.custom_amount ? 'Any amount' : fmtAmt(item.amount, item.currency)) + '</div>';
-    card.onclick = function() { location.href = url; };
-    grid.appendChild(card);
+    const tile = document.createElement('div');
+    tile.className = 'ig-tile';
+    tile.title = item.name;
+    tile.appendChild(postVisual(item, 'ig-tile-price'));
+    tile.onclick = function() { location.href = coUrl(item.type, item.id); };
+    grid.appendChild(tile);
   });
 }
 
@@ -3566,12 +3790,40 @@ function openEditProfile() {
       sp.onclick = function() {
         document.querySelectorAll('.ep-emoji').forEach(function(x){ x.classList.remove('sel'); });
         sp.classList.add('sel');
+        if (!_epAvatarUrl) setAvatar(document.getElementById('ep-photo'), null, e);
       };
       grid.appendChild(sp);
     });
   }
+  _epAvatarKey = undefined;   // unchanged until the user uploads or removes a photo
+  _epAvatarUrl = currentProfile.avatar_url || null;
+  setAvatar(document.getElementById('ep-photo'), _epAvatarUrl, curAv);
+  if (document.getElementById('ep-photo-rm')) document.getElementById('ep-photo-rm').style.display = _epAvatarUrl ? '' : 'none';
   document.getElementById('ep-ovl').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+let _epAvatarKey, _epAvatarUrl = null;
+function pickAvatarPhoto() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async function() {
+    if (!inp.files || !inp.files[0]) return;
+    const el = document.getElementById('ep-photo');
+    el.textContent = '⏳';
+    try {
+      const d = await uploadImage(inp.files[0], 'avatar');
+      _epAvatarKey = d.key; _epAvatarUrl = d.url;
+      document.getElementById('ep-photo-rm').style.display = '';
+    } catch (e) { toast(e.message, 'er'); }
+    setAvatar(el, _epAvatarUrl, document.querySelector('.ep-emoji.sel')?.textContent);
+  };
+  inp.click();
+}
+function removeAvatarPhoto() {
+  _epAvatarKey = null; _epAvatarUrl = null;
+  setAvatar(document.getElementById('ep-photo'), null, document.querySelector('.ep-emoji.sel')?.textContent);
+  document.getElementById('ep-photo-rm').style.display = 'none';
 }
 
 function closeEditProfile() {
@@ -3587,13 +3839,15 @@ async function saveProfile() {
   const btn = document.getElementById('ep-save-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
-  const ok = await apiToast('PATCH', '/api/me', { business_name: biz || currentProfile.business_name, bio: bio || null, avatar });
+  const body = { business_name: biz || currentProfile.business_name, bio: bio || null, avatar };
+  if (_epAvatarKey !== undefined) body.avatar_key = _epAvatarKey;
+  const ok = await apiToast('PATCH', '/api/me', body);
 
   if (btn) { btn.disabled = false; btn.textContent = 'Save Profile'; }
 
   if (ok) {
-    currentProfile = Object.assign({}, currentProfile, { business_name: biz, bio: bio, avatar: avatar });
-    if (document.getElementById('pc-avatar')) document.getElementById('pc-avatar').textContent = avatar;
+    currentProfile = Object.assign({}, currentProfile, { business_name: biz, bio: bio, avatar: avatar, avatar_url: ok.avatar_url || null });
+    setAvatar(document.getElementById('pc-avatar'), currentProfile.avatar_url, avatar);
     if (document.getElementById('pc-biz')) document.getElementById('pc-biz').textContent = biz || currentProfile.business_name;
     if (document.getElementById('pc-bio')) document.getElementById('pc-bio').textContent = bio || '';
     closeEditProfile();
