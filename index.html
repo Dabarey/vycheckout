@@ -491,6 +491,18 @@ tbody tr:hover td{background:var(--bg);}
 .co-lbl{display:block;font-size:.7rem;font-weight:700;color:var(--ink2);margin:.1rem 0 .3rem;}
 .txn-sub{font-size:.7rem;color:var(--ink3);font-weight:400;}
 .txn-note{font-size:.72rem;color:var(--ink2);font-style:italic;margin-top:.15rem;max-width:240px;white-space:normal;}
+.ship-toggle{display:flex;align-items:flex-start;gap:.5rem;font-size:.8rem;font-weight:600;color:var(--ink1);cursor:pointer;line-height:1.4;}
+.ship-toggle input{margin-top:.15rem;width:16px;height:16px;flex-shrink:0;}
+.ship-fee-wrap{margin-top:.6rem;}
+.co-ship{display:grid;gap:.55rem;margin-top:.2rem;}
+.co-ship-2{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;}
+.co-breakdown{font-size:.74rem;color:rgba(255,255,255,.6);margin-top:.15rem;}
+.ship-pill{display:inline-block;font-size:.64rem;font-weight:700;padding:.12rem .45rem;border-radius:6px;margin-top:.3rem;}
+.ship-pill.to{background:#fef3c7;color:#92400e;}
+.ship-pill.done{background:#dcfce7;color:#166534;}
+.ship-addr{font-size:.7rem;color:var(--ink2);white-space:pre-line;margin-top:.25rem;line-height:1.4;max-width:260px;}
+.ship-btn{margin-top:.35rem;}
+.ship-banner{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;}
 .co-img{display:block;width:100%;aspect-ratio:1/1;max-height:360px;object-fit:cover;background:var(--al);}
 /* Stats bar compact */
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.8rem;}
@@ -1328,6 +1340,7 @@ async function renderUserDash() {
     <!-- HOME -->
     <div class="panel active" id="p-home">
       <div id="verify-banner"></div>
+      <div id="ship-banner"></div>
 
       <!-- Greeting -->
       <div class="home-greet" style="display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem">
@@ -1412,6 +1425,8 @@ async function renderUserDash() {
               <option value="JPY">🇯🇵 JPY</option><option value="MXN">🇲🇽 MXN</option><option value="HKD">🇭🇰 HKD</option>
             </select></div>
           </div>
+          <div class="fg"><label class="ship-toggle"><input type="checkbox" id="nc-ship" onchange="shipToggle('nc')"><span>📦 Needs shipping — ask the buyer for a delivery address</span></label>
+            <div class="ship-fee-wrap" id="nc-sf-wrap" style="display:none"><label>Shipping fee (optional)</label><input type="number" id="nc-sf" placeholder="0.00 = free shipping" min="0" step="0.01"><div class="photo-hint">Added to the price at checkout. The <span class="fee-pct">19%</span> platform fee applies to the total.</div></div></div>
           <div class="fg"><label>Photo (optional)</label><div class="photo-pick"><div class="photo-thumb" id="nc-ph-th">📷</div><div><button type="button" class="bxs" onclick="pickPhoto('nc')">Add photo</button> <button type="button" class="bxs rd" id="nc-ph-rm" style="display:none" onclick="clearPhoto('nc')">Remove</button><div class="photo-hint">Shown in your followers’ feed and on the payment page. Collections with a photo can also appear in Discover.</div></div></div></div>
           <div class="fg"><label>Description</label><textarea id="nc-d" placeholder="What is this for?"></textarea></div>
           <div class="fee-note" id="nc-fee"></div>
@@ -1471,6 +1486,8 @@ async function renderUserDash() {
             <option value="AUD">🇦🇺 AUD</option><option value="CAD">🇨🇦 CAD</option><option value="SGD">🇸🇬 SGD</option>
             <option value="JPY">🇯🇵 JPY</option><option value="MXN">🇲🇽 MXN</option><option value="HKD">🇭🇰 HKD</option>
           </select></div>
+          <div class="fg"><label class="ship-toggle"><input type="checkbox" id="nl-ship" onchange="shipToggle('nl')"><span>📦 Needs shipping — ask the buyer for a delivery address</span></label>
+            <div class="ship-fee-wrap" id="nl-sf-wrap" style="display:none"><label>Shipping fee (optional)</label><input type="number" id="nl-sf" placeholder="0.00 = free shipping" min="0" step="0.01"><div class="photo-hint">Added to the price at checkout. The <span class="fee-pct">19%</span> platform fee applies to the total.</div></div></div>
           <div class="fg"><label>Photo (optional)</label><div class="photo-pick"><div class="photo-thumb" id="nl-ph-th">📷</div><div><button type="button" class="bxs" onclick="pickPhoto('nl')">Add photo</button> <button type="button" class="bxs rd" id="nl-ph-rm" style="display:none" onclick="clearPhoto('nl')">Remove</button><div class="photo-hint">Shown in your followers’ feed and on the payment page.</div></div></div></div>
           <div class="fg"><label>Note (optional)</label><textarea id="nl-no" placeholder="Extra context for payer"></textarea></div>
           <div class="fee-note" id="nl-fee"></div>
@@ -1705,6 +1722,11 @@ async function loadUserData() {
     '<button class="bxs" onclick="resendVerification(this)">Resend email</button></div>';
 
   renderHome(d);
+  const toShip = (d.transactions || []).filter(t => t.ship_status === 'to_ship').length;
+  const sb = g('ship-banner');
+  if (sb) sb.innerHTML = toShip
+    ? `<div class="ibox ship-banner" style="margin-bottom:1rem"><span>📦 You have <strong>${toShip}</strong> order${toShip === 1 ? '' : 's'} to ship.</span><button class="bxs" onclick="quickNav('p-txn')">View orders</button></div>`
+    : '';
   renderCols(cols, d.transactions);
   renderSubs(subs);
   renderLnks(lnks);
@@ -2004,6 +2026,22 @@ async function uploadPhoto(prefix, file) {
     toast(e.message, 'er');
   }
 }
+// Shipping settings on the create forms
+function shipToggle(prefix) {
+  const on = !!g(prefix + '-ship')?.checked;
+  if (g(prefix + '-sf-wrap')) g(prefix + '-sf-wrap').style.display = on ? '' : 'none';
+}
+function shipSettings(prefix) {
+  if (!g(prefix + '-ship')?.checked) return {};
+  const fee = parseFloat(gi(prefix + '-sf') || '0');
+  return { ship_required: true, ship_fee: fee > 0 ? fee : 0 };
+}
+function clearShip(prefix) {
+  if (g(prefix + '-ship')) g(prefix + '-ship').checked = false;
+  if (g(prefix + '-sf')) g(prefix + '-sf').value = '';
+  shipToggle(prefix);
+}
+
 function clearPhoto(prefix) {
   delete _photo[prefix];
   const th = g(prefix + '-ph-th');
@@ -2029,6 +2067,8 @@ function cardActions(type, it, payLabel, table) {
 }
 
 document.addEventListener('click', function(e) {
+  const shipBtn = e.target.closest('[data-act="ship"]');
+  if (shipBtn) { markShipped(shipBtn.getAttribute('data-id')); return; }
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const act = b.dataset.act;
@@ -2108,12 +2148,36 @@ function renderTxns(txns) {
   tb.innerHTML = txns.map(t => `<tr>
     <td>${fd(t.created_at)}</td>
     <td>${t.payer_name ? '<strong>' + esc(t.payer_name) + '</strong>' : '<span style="color:var(--ink3)">—</span>'}${t.payer_email ? '<div class="txn-sub">' + esc(t.payer_email) + '</div>' : ''}${t.payer_note ? '<div class="txn-note">“' + esc(t.payer_note) + '”</div>' : ''}</td>
-    <td>${esc(t.description || '')}</td>
-    <td>${fmtAmt(t.gross_amount, t.currency)}</td>
+    <td>${esc(t.description || '')}${shipCell(t)}</td>
+    <td>${fmtAmt(t.gross_amount, t.currency)}${t.shipping_fee ? '<div class="txn-sub">incl. ' + fmtAmt(t.shipping_fee, t.currency) + ' shipping</div>' : ''}</td>
     <td style="color:var(--grn)">${fmtAmt(t.net_amount, t.currency)}</td>
     <td><span class="pill pb">${esc(t.payment_method)}</span></td>
     <td>${statusPill(t)}</td>
   </tr>`).join('');
+}
+
+function shipAddr(s) {
+  return s ? [s.name, s.phone, s.line1, s.line2, [s.city, s.region, s.postal].filter(Boolean).join(', '), s.country].filter(Boolean).join('\n') : '';
+}
+function shipCell(t) {
+  if (!t.ship_status) return '';
+  const done = t.ship_status === 'shipped';
+  return `<div><span class="ship-pill ${done ? 'done' : 'to'}">${done ? '✓ Shipped' : '📦 To ship'}</span></div>
+    <div class="ship-addr">${esc(shipAddr(t.shipping))}</div>
+    ${done ? `<div class="txn-sub">${esc([t.ship_carrier, t.ship_tracking].filter(Boolean).join(' · ') || 'No tracking number')}</div>` : ''}
+    <button class="bxs ship-btn" data-act="ship" data-id="${esc(t.id)}">${done ? 'Edit tracking' : 'Mark shipped'}</button>`;
+}
+// Seller marks an order shipped; the buyer gets an email with the courier and tracking number
+async function markShipped(id) {
+  const t = (_dash?.transactions || []).find(x => x.id === id);
+  const carrier = prompt('Courier (e.g. DHL, Pronto, Sri Lanka Post) — optional:', t?.ship_carrier || '');
+  if (carrier === null) return;
+  const tracking = prompt('Tracking number — optional:', t?.ship_tracking || '');
+  if (tracking === null) return;
+  const d = await apiToast('POST', '/api/transactions/' + encodeURIComponent(id) + '/ship', { carrier, tracking });
+  if (!d) return;
+  toast(d.emailed ? 'Marked as shipped — the buyer was emailed ✓' : 'Marked as shipped ✓ (buyer gave no email)', 'ok');
+  await loadUserData();
 }
 
 function renderSubscribers(list, plans) {
@@ -2305,7 +2369,8 @@ function quickNav(id) {
 async function saveItem(type, body, btnId, btnText) {
   const ph = _photo[PHOTO_PREFIX[type]];
   if (ph) body.image_key = ph.key;
-  const sig = [body.name, body.amount, body.currency, body.image_key || ''].join('|');
+  Object.assign(body, shipSettings(PHOTO_PREFIX[type]));
+  const sig = [body.name, body.amount, body.currency, body.image_key || '', body.ship_required ? 'ship' + (body.ship_fee || 0) : ''].join('|');
   const pre = _previewSaved[type];
   let item;
   if (pre && pre.sig === sig) {
@@ -2330,7 +2395,7 @@ async function createCol() {
   if (!item) return;
   showCreatedLink('Collection created!', name, coUrl('col', item.id));
   ['nc-n', 'nc-a', 'nc-d'].forEach(id => { if (g(id)) g(id).value = ''; });
-  clearPhoto('nc');
+  clearPhoto('nc'); clearShip('nc');
   if (g('nc-pay-box')) g('nc-pay-box').style.display = 'none';
   await loadUserData();
 }
@@ -2358,7 +2423,7 @@ async function createLink() {
   if (!item) return;
   showCreatedLink('Payment link ready!', name, coUrl('lnk', item.id));
   ['nl-n', 'nl-a', 'nl-no'].forEach(id => { if (g(id)) g(id).value = ''; });
-  clearPhoto('nl');
+  clearPhoto('nl'); clearShip('nl');
   if (g('nl-pay-box')) g('nl-pay-box').style.display = 'none';
   await loadUserData();
 }
@@ -2717,7 +2782,8 @@ async function initCheckout(type, id) {
                placeholder="Enter amount" min="1" step="${isZD(cur) ? '1' : '0.01'}"
                oninput="updateCustomAmt('${esc(cur)}')">
            </div>`
-        : `<div class="price">${fmtAmt(item.amount, cur)}${isSub ? `<span style="font-size:.9rem;font-weight:600;opacity:.7"> / ${esc(cycle.replace('ly', '').replace('annual', 'year'))}</span>` : ''}</div>`}
+        : `<div class="price">${fmtAmt(+item.amount + (item.ship_required ? +item.ship_fee : 0), cur)}${isSub ? `<span style="font-size:.9rem;font-weight:600;opacity:.7"> / ${esc(cycle.replace('ly', '').replace('annual', 'year'))}</span>` : ''}</div>`}
+      ${item.ship_required ? `<div class="co-breakdown">📦 ${isCustomAmt ? 'Plus ' : (fmtAmt(item.amount, cur) + ' + ')}${+item.ship_fee > 0 ? fmtAmt(item.ship_fee, cur) + ' shipping' : 'free shipping'}</div>` : ''}
       ${isSub ? `<div class="desc">Charged ${esc(cycle)} until you cancel. You can cancel any time from your receipt email.</div>` : ''}
       ${item.description ? `<div class="desc">${esc(item.description)}</div>` : ''}
       ${item.note ? `<div class="desc">${esc(item.note)}</div>` : ''}
@@ -2729,6 +2795,14 @@ async function initCheckout(type, id) {
           <label class="co-lbl" for="co-name">Your details (shared with the seller)</label>
           <input type="text" id="co-name" placeholder="Your full name" autocomplete="name" maxlength="120">
           <input type="email" id="co-email" placeholder="Email for your receipt${isSub ? '' : ' (optional)'}" autocomplete="email">
+          ${item.ship_required ? `<label class="co-lbl" style="margin-top:.35rem">📦 Delivery address</label>
+          <div class="co-ship">
+            <input type="tel" id="co-s-phone" placeholder="Phone number" autocomplete="tel" maxlength="40">
+            <input type="text" id="co-s-line1" placeholder="Street address" autocomplete="address-line1" maxlength="200">
+            <input type="text" id="co-s-line2" placeholder="Apartment, suite, etc. (optional)" autocomplete="address-line2" maxlength="200">
+            <div class="co-ship-2"><input type="text" id="co-s-city" placeholder="City" autocomplete="address-level2" maxlength="100"><input type="text" id="co-s-postal" placeholder="Postal code" autocomplete="postal-code" maxlength="30"></div>
+            <div class="co-ship-2"><input type="text" id="co-s-region" placeholder="State / Province (optional)" autocomplete="address-level1" maxlength="100"><input type="text" id="co-s-country" placeholder="Country" autocomplete="country-name" maxlength="80"></div>
+          </div>` : ''}
           ${isSub ? '' : `<textarea id="co-note" maxlength="300" placeholder="Message to ${esc(business)} (optional) — e.g. order number, size, delivery details"></textarea>`}
         </div>
         <div class="pm-tabs"><button class="pm-tab active" onclick="swTab(this,'co-pp-p','co-sc-p')">🅿 PayPal</button><button class="pm-tab" onclick="swTab(this,'co-sc-p','co-pp-p');coCardInit()">💳 Card</button></div>
@@ -2776,7 +2850,16 @@ function coPayer(emailRequired) {
   if (name.length < 2) { toast('Enter your name so the seller knows who paid', 'er'); g('co-name')?.focus(); return null; }
   const email = coEmail(emailRequired);
   if (email === null) return null;
-  return { payer_name: name, payer_email: email || undefined, payer_note: (gi('co-note') || '').trim() || undefined };
+  const out = { payer_name: name, payer_email: email || undefined, payer_note: (gi('co-note') || '').trim() || undefined };
+  if (coCtx && coCtx.item.ship_required) {
+    const v = id => (gi('co-s-' + id) || '').trim();
+    const shipping = { name, phone: v('phone'), line1: v('line1'), line2: v('line2'), city: v('city'), region: v('region'), postal: v('postal'), country: v('country') };
+    for (const [k, label] of [['phone', 'phone number'], ['line1', 'street address'], ['city', 'city'], ['country', 'country']]) {
+      if (!shipping[k]) { toast('Enter your ' + label + ' for delivery', 'er'); g('co-s-' + k)?.focus(); return null; }
+    }
+    out.shipping = shipping;
+  }
+  return out;
 }
 
 function coEmail(required) {

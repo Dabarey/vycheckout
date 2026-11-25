@@ -155,6 +155,21 @@ async function availableAtFor(env, userId) {
 }
 var MEDIA_KEY_RE = /^(p|a)\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
 var mediaUrl = (key) => key && MEDIA_KEY_RE.test(key) ? `/api/media/${key}` : null;
+var SHIP_FIELDS = { name: 120, phone: 40, line1: 200, line2: 200, city: 100, region: 100, postal: 30, country: 80 };
+function cleanShipping(raw) {
+  if (!raw || typeof raw !== "object") throw bad("Enter your delivery address", "shipping_required");
+  const out = {};
+  for (const [k, max] of Object.entries(SHIP_FIELDS)) {
+    const v = typeof raw[k] === "string" ? raw[k].trim() : "";
+    if (v.length > max) throw bad(`Address ${k} is too long`);
+    if (v) out[k] = v;
+  }
+  for (const [k, label] of [["name", "name"], ["phone", "phone number"], ["line1", "street address"], ["city", "city"], ["country", "country"]]) {
+    if (!out[k]) throw bad(`Enter your ${label} for delivery`, "shipping_required");
+  }
+  return out;
+}
+var shippingText = (s) => s ? [s.name, s.phone, s.line1, s.line2, [s.city, s.region, s.postal].filter(Boolean).join(", "), s.country].filter(Boolean).join("\n") : "";
 
 // src/human.js
 var COOKIE = "vy_human";
@@ -260,7 +275,7 @@ var money = (minor, currency) => {
     return `${v.toFixed(zero ? 0 : 2)} ${currency}`;
   }
 };
-function payerReceiptEmail(env, { to, business, description, grossMinor, currency, txnId, method, cancelUrl: cancelUrl2 }) {
+function payerReceiptEmail(env, { to, business, description, grossMinor, currency, txnId, method, cancelUrl: cancelUrl2, shipping }) {
   const lines = [
     `Thanks for your payment to ${business}.`,
     "",
@@ -271,6 +286,7 @@ function payerReceiptEmail(env, { to, business, description, grossMinor, currenc
     `Date: ${(/* @__PURE__ */ new Date()).toUTCString()}`
   ];
   if (cancelUrl2) lines.push("", `This is a recurring subscription. To cancel it, open: ${cancelUrl2}`);
+  if (shipping) lines.push("", "Delivering to:", shippingText(shipping), "", `${business} will email you a tracking number when it ships.`);
   const text = lines.join("\n");
   const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;line-height:1.55">
     <h2 style="margin:0 0 8px">Payment received \u2713</h2>
@@ -281,15 +297,17 @@ function payerReceiptEmail(env, { to, business, description, grossMinor, currenc
       <tr><td style="padding:3px 12px 3px 0;color:#666">Paid with</td><td>${escHtml(method)}</td></tr>
       <tr><td style="padding:3px 12px 3px 0;color:#666">Reference</td><td style="font-family:monospace;font-size:12px">${escHtml(txnId)}</td></tr>
     </table>
+    ${shipping ? `<p style="font-size:14px"><strong>Delivering to:</strong><br>${escHtml(shippingText(shipping)).replace(/\n/g, "<br>")}</p><p style="font-size:13px;color:#555">${escHtml(business)} will email you a tracking number when it ships.</p>` : ""}
     ${cancelUrl2 ? `<p style="font-size:13px;color:#555">This is a recurring subscription. <a href="${escHtml(cancelUrl2)}">Cancel it here</a> any time.</p>` : ""}
   </div>`;
   return sendEmail(env, { to, subject: `Receipt: ${money(grossMinor, currency)} to ${business}`, text, html });
 }
-function saleAlertEmail(env, { to, description, grossMinor, netMinor, currency, availableAt, payerName, payerEmail, payerNote, appUrl: appUrl2 }) {
+function saleAlertEmail(env, { to, description, grossMinor, netMinor, currency, availableAt, payerName, payerEmail, payerNote, appUrl: appUrl2, shipping }) {
   const when = availableAt ? new Date(availableAt).toDateString() : "now";
   const lines = [
     `You received ${money(grossMinor, currency)} for ${description || "a payment"}${payerName ? ` from ${payerName}` : ""}${payerEmail ? ` (${payerEmail})` : ""}.`,
     ...payerNote ? [`Their message: "${payerNote}"`] : [],
+    ...shipping ? ["\u{1F4E6} Ship to:", ...shippingText(shipping).split("\n"), "Mark it shipped in Payments \u2192 Transactions once you send it."] : [],
     `After the platform fee you get ${money(netMinor, currency)}, available to withdraw: ${when}.`,
     "",
     `Dashboard: ${appUrl2}`,
@@ -301,6 +319,21 @@ function saleAlertEmail(env, { to, description, grossMinor, netMinor, currency, 
     text: lines.join("\n"),
     html: `<div style="font-family:system-ui,sans-serif;max-width:480px;line-height:1.55"><p>${lines.slice(0, lines.indexOf("")).map(escHtml).join("<br>")}</p>
       <p><a href="${escHtml(appUrl2)}">Open your dashboard</a></p><p style="font-size:12px;color:#777">You can turn these emails off in Account settings.</p></div>`
+  });
+}
+function shippedEmail(env, { to, business, description, carrier, tracking, shipping }) {
+  const lines = [
+    `Good news \u2014 ${business} has shipped your order${description ? ` (${description})` : ""}.`,
+    "",
+    ...carrier ? [`Courier: ${carrier}`] : [],
+    ...tracking ? [`Tracking number: ${tracking}`] : [],
+    ...shipping ? ["", "Delivering to:", shippingText(shipping)] : []
+  ];
+  return sendEmail(env, {
+    to,
+    subject: `\u{1F4E6} Your order from ${business} has shipped`,
+    text: lines.join("\n"),
+    html: `<div style="font-family:system-ui,sans-serif;max-width:480px;line-height:1.55">${lines.map((l) => l ? escHtml(l) : "").join("<br>")}</div>`
   });
 }
 
@@ -654,13 +687,17 @@ async function newOrder(env, request, provider) {
   await guardPayer(env, request);
   const item = await payableItem(env, b.item_id);
   if (item.type === "sub") throw bad("Subscriptions use the subscribe button", "use_subscription");
-  const amount = priceFor(env, item, b.amount);
-  if (amount <= 0) throw bad("Invalid amount");
+  const itemAmount = priceFor(env, item, b.amount);
+  if (itemAmount <= 0) throw bad("Invalid amount");
+  const ship = item.ship_required ? cleanShipping(b.shipping) : null;
+  const shipFee = ship ? item.ship_fee_minor || 0 : 0;
+  const amount = itemAmount + shipFee;
   const payer_name = str(b.payer_name, { max: 120, field: "Your name" }) || null;
   const payer_email = b.payer_email ? emailOf(b.payer_email) : null;
   const payer_note = str(b.payer_note, { max: 300, field: "Message" }) || null;
-  const order = { id: newId(), item_id: item.id, owner_id: item.user_id, provider, amount_minor: amount, currency: item.currency, payer_name, payer_email, payer_note };
-  await env.DB.prepare("INSERT INTO orders (id, item_id, owner_id, provider, amount_minor, currency, payer_name, payer_email, payer_note) VALUES (?,?,?,?,?,?,?,?,?)").bind(order.id, order.item_id, order.owner_id, provider, amount, item.currency, payer_name, payer_email, payer_note).run();
+  const ship_json = ship ? JSON.stringify(ship) : null;
+  const order = { id: newId(), item_id: item.id, owner_id: item.user_id, provider, amount_minor: amount, currency: item.currency, payer_name, payer_email, payer_note, ship_json, ship_fee_minor: shipFee };
+  await env.DB.prepare("INSERT INTO orders (id, item_id, owner_id, provider, amount_minor, currency, payer_name, payer_email, payer_note, ship_json, ship_fee_minor) VALUES (?,?,?,?,?,?,?,?,?,?,?)").bind(order.id, order.item_id, order.owner_id, provider, amount, item.currency, payer_name, payer_email, payer_note, ship_json, shipFee).run();
   return { order, item, body: b };
 }
 async function recordPayment(env, ctx, order, p) {
@@ -691,8 +728,9 @@ async function recordPayment(env, ctx, order, p) {
     env.DB.prepare(
       `INSERT OR IGNORE INTO transactions
         (id, owner_id, item_id, item_type, order_id, provider, provider_ref, description, payer_name, payer_email, payer_note,
-         currency, gross_minor, fee_minor, net_minor, referrer_id, referral_minor, subscription_id)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+         currency, gross_minor, fee_minor, net_minor, referrer_id, referral_minor, subscription_id,
+         ship_json, ship_fee_minor, ship_status)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       txnId,
       order.owner_id,
@@ -711,7 +749,10 @@ async function recordPayment(env, ctx, order, p) {
       net,
       referrer,
       refAmt,
-      p.subscriptionId || null
+      p.subscriptionId || null,
+      order.ship_json || null,
+      order.ship_fee_minor || 0,
+      order.ship_json ? "to_ship" : null
     ),
     env.DB.prepare(`INSERT INTO ledger (id, user_id, currency, amount_minor, kind, txn_id, available_at) SELECT ?,?,?,?,'sale',?,? ${onlyIfNew}`).bind(newId(), order.owner_id, order.currency, net, txnId, ownerAvail, txnId)
   ];
@@ -735,6 +776,8 @@ async function recordPayment(env, ctx, order, p) {
       payer_name: txn.payer_name,
       payer_note: txn.payer_note,
       payment_method: method,
+      shipping: txn.ship_json ? JSON.parse(txn.ship_json) : null,
+      shipping_fee: toMajor(txn.ship_fee_minor || 0, txn.currency),
       subscription_id: txn.subscription_id,
       created_at: txn.created_at
     });
@@ -747,7 +790,8 @@ async function recordPayment(env, ctx, order, p) {
       currency: txn.currency,
       txnId: txn.id,
       method,
-      cancelUrl: p.cancelUrl
+      cancelUrl: p.cancelUrl,
+      shipping: txn.ship_json ? JSON.parse(txn.ship_json) : null
     }));
     if (owner?.notify_sales && owner.email) ctx.waitUntil(saleAlertEmail(env, {
       to: owner.email,
@@ -759,7 +803,8 @@ async function recordPayment(env, ctx, order, p) {
       payerName: txn.payer_name,
       payerEmail: txn.payer_email,
       payerNote: txn.payer_note,
-      appUrl: base || "your dashboard"
+      appUrl: base || "your dashboard",
+      shipping: txn.ship_json ? JSON.parse(txn.ship_json) : null
     }));
   }
   return txn;
@@ -1472,7 +1517,9 @@ var itemView = (i) => ({
   source: i.source,
   created_at: i.created_at,
   expired: !!(i.expires_at && new Date(i.expires_at) < /* @__PURE__ */ new Date()),
-  image: mediaUrl(i.image_key)
+  image: mediaUrl(i.image_key),
+  ship_required: !!i.ship_required,
+  ship_fee: toMajor(i.ship_fee_minor || 0, i.currency)
 });
 var txnView = (t) => ({
   id: t.id,
@@ -1482,6 +1529,12 @@ var txnView = (t) => ({
   payer_name: t.payer_name,
   payer_email: t.payer_email,
   payer_note: t.payer_note,
+  shipping: t.ship_json ? JSON.parse(t.ship_json) : null,
+  shipping_fee: toMajor(t.ship_fee_minor || 0, t.currency),
+  ship_status: t.ship_status,
+  ship_carrier: t.ship_carrier,
+  ship_tracking: t.ship_tracking,
+  shipped_at: t.shipped_at,
   currency: t.currency,
   gross_amount: toMajor(t.gross_minor, t.currency),
   fee_amount: toMajor(t.fee_minor, t.currency),
@@ -1599,10 +1652,16 @@ async function createItemFor(env, userId, b, source) {
   const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM items WHERE user_id = ? AND deleted_at IS NULL").bind(userId).first();
   if (count.n >= MAX_ITEMS_PER_USER) throw bad("You have reached the item limit. Delete some old items first.");
   const image_key = b.image_key ? await ownedKey(env, userId, b.image_key, "post") : null;
+  const ship_required = !!b.ship_required && type !== "sub";
+  let ship_fee = 0;
+  if (ship_required && b.ship_fee) {
+    ship_fee = toMinor(b.ship_fee, currency);
+    if (ship_fee < 0 || ship_fee > toMinor(parseFloat(env.MAX_PAYMENT || "10000"), currency)) throw bad("Invalid shipping fee");
+  }
   const id = newId();
   await env.DB.prepare(
-    `INSERT INTO items (id, user_id, type, name, description, note, amount_minor, currency, cycle, custom_amount, expires_at, source, image_key)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    `INSERT INTO items (id, user_id, type, name, description, note, amount_minor, currency, cycle, custom_amount, expires_at, source, image_key, ship_required, ship_fee_minor)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(
     id,
     userId,
@@ -1616,7 +1675,9 @@ async function createItemFor(env, userId, b, source) {
     custom ? 1 : 0,
     expires_at,
     source,
-    image_key
+    image_key,
+    ship_required ? 1 : 0,
+    ship_fee
   ).run();
   return env.DB.prepare("SELECT * FROM items WHERE id = ?").bind(id).first();
 }
@@ -1635,6 +1696,27 @@ async function deleteItem(env, request, id) {
     failed++;
   });
   return json({ ok: true, cancelled: subs.length - failed, cancel_failed: failed });
+}
+async function markShipped(env, request, txnId, ctx) {
+  const u = await requireUser(env, request);
+  const b = await readJson(request);
+  const carrier = str(b.carrier, { max: 60, field: "Courier" }) || null;
+  const tracking = str(b.tracking, { max: 100, field: "Tracking number" }) || null;
+  const r = await env.DB.prepare(
+    `UPDATE transactions SET ship_status = 'shipped', ship_carrier = ?, ship_tracking = ?, shipped_at = COALESCE(shipped_at, ?)
+     WHERE id = ? AND owner_id = ? AND ship_status IS NOT NULL`
+  ).bind(carrier, tracking, nowIso(), String(txnId).slice(0, 64), u.id).run();
+  if (!r.meta.changes) throw notFound("Order not found");
+  const t = await env.DB.prepare("SELECT * FROM transactions WHERE id = ?").bind(txnId).first();
+  if (t.payer_email) ctx.waitUntil(shippedEmail(env, {
+    to: t.payer_email,
+    business: u.business_name || u.full_name || "The seller",
+    description: t.description,
+    carrier,
+    tracking,
+    shipping: t.ship_json ? JSON.parse(t.ship_json) : null
+  }));
+  return json({ ok: true, transaction: txnView(t), emailed: !!t.payer_email });
 }
 var BANK_FIELDS = ["holder", "routing", "account", "type", "sort", "iban", "bic", "ifsc", "bank", "swift", "address"];
 async function requestWithdrawal(env, request, ctx) {
@@ -2418,6 +2500,7 @@ async function route(request, env, ctx) {
   if (seg[0] === "api" && rid) {
     if (res === "items" && m === "DELETE" && seg.length === 3) return deleteItem(env, request, rid);
     if (res === "subscriptions" && m === "POST" && seg[3] === "cancel") return merchantCancel(env, request, rid);
+    if (res === "transactions" && m === "POST" && seg[3] === "ship") return markShipped(env, request, rid, ctx);
     if (res === "follows" && seg.length === 3 && (m === "POST" || m === "DELETE")) return follow(env, request, rid, m === "POST");
     if (res === "public" && m === "GET" && rid === "items" && seg[3]) return publicItem(env, request, seg[3]);
     if (res === "public" && m === "GET" && rid === "profiles" && seg[3]) return publicProfile(env, request, seg[3]);
