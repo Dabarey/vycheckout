@@ -550,10 +550,10 @@ async function googleStart(env, request) {
   });
 }
 async function googleCallback(env, request, ctx) {
-  const base = appUrl(env, request);
+  const base2 = appUrl(env, request);
   const fail = (reason) => new Response(null, {
     status: 302,
-    headers: { Location: `${base}/?login_error=${encodeURIComponent(reason)}`, "Set-Cookie": cookie(OAUTH_COOKIE, "", { maxAge: 0, path: "/api/auth/google" }) }
+    headers: { Location: `${base2}/?login_error=${encodeURIComponent(reason)}`, "Set-Cookie": cookie(OAUTH_COOKIE, "", { maxAge: 0, path: "/api/auth/google" }) }
   });
   const url = new URL(request.url);
   const [state, ref] = (readCookie2(request, OAUTH_COOKIE) || "").split(".");
@@ -565,7 +565,7 @@ async function googleCallback(env, request, ctx) {
       code: url.searchParams.get("code"),
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: `${base}/api/auth/google/callback`,
+      redirect_uri: `${base2}/api/auth/google/callback`,
       grant_type: "authorization_code"
     })
   });
@@ -594,7 +594,7 @@ async function googleCallback(env, request, ctx) {
     u = { id };
     ctx.waitUntil(notifyAdmin(env, "New VyCheckout signup (Google)", [`Name: ${name}`, `Email: ${email}`]));
   }
-  const headers = new Headers({ Location: `${base}/` });
+  const headers = new Headers({ Location: `${base2}/` });
   headers.append("Set-Cookie", await createSession(env, u.id));
   headers.append("Set-Cookie", cookie(OAUTH_COOKIE, "", { maxAge: 0, path: "/api/auth/google" }));
   return new Response(null, { status: 302, headers });
@@ -782,7 +782,7 @@ async function recordPayment(env, ctx, order, p) {
       subscription_id: txn.subscription_id,
       created_at: txn.created_at
     });
-    const base = env.APP_URL || "";
+    const base2 = env.APP_URL || "";
     if (txn.payer_email) ctx.waitUntil(payerReceiptEmail(env, {
       to: txn.payer_email,
       business,
@@ -804,7 +804,7 @@ async function recordPayment(env, ctx, order, p) {
       payerName: txn.payer_name,
       payerEmail: txn.payer_email,
       payerNote: txn.payer_note,
-      appUrl: base || "your dashboard",
+      appUrl: base2 || "your dashboard",
       shipping: txn.ship_json ? JSON.parse(txn.ship_json) : null
     }));
   }
@@ -1501,8 +1501,8 @@ async function ownedKey(env, userId, key, kind) {
 var CYCLES2 = ["WEEKLY", "MONTHLY", "QUARTERLY", "ANNUALLY"];
 var MAX_ITEMS_PER_USER = 1e3;
 function minWithdraw(env, method, currency) {
-  const base = method === "paypal" ? parseFloat(env.MIN_WITHDRAW_PAYPAL || "100") : parseFloat(env.MIN_WITHDRAW_BANK || "500");
-  return isZeroDecimal(currency) ? base * 100 : base;
+  const base2 = method === "paypal" ? parseFloat(env.MIN_WITHDRAW_PAYPAL || "100") : parseFloat(env.MIN_WITHDRAW_BANK || "500");
+  return isZeroDecimal(currency) ? base2 * 100 : base2;
 }
 var itemView = (i) => ({
   id: i.id,
@@ -1838,7 +1838,7 @@ async function feed(env, request) {
 }
 async function explore(env, request) {
   const viewer = await getSessionUser(env, request);
-  const page = Math.min(Math.max(parseInt(new URL(request.url).searchParams.get("page") || "0", 10) || 0, 0), 20);
+  const page2 = Math.min(Math.max(parseInt(new URL(request.url).searchParams.get("page") || "0", 10) || 0, 0), 20);
   const since = new Date(Date.now() - 30 * 864e5).toISOString();
   const { results } = await env.DB.prepare(
     `SELECT * FROM (
@@ -1851,8 +1851,8 @@ async function explore(env, request) {
          AND o.suspended = 0 AND o.deleted_at IS NULL AND i.user_id != ?2
      ) WHERE rn <= 2
      ORDER BY sales DESC, created_at DESC LIMIT ?3 OFFSET ?4`
-  ).bind(since, viewer?.id || "", PAGE, page * PAGE).all();
-  return json({ items: results.map(postView), next: results.length === PAGE ? page + 1 : null });
+  ).bind(since, viewer?.id || "", PAGE, page2 * PAGE).all();
+  return json({ items: results.map(postView), next: results.length === PAGE ? page2 + 1 : null });
 }
 async function suggested(env, request) {
   const viewer = await getSessionUser(env, request);
@@ -1949,7 +1949,7 @@ async function apiUser(env, request) {
 }
 async function apiV1(env, request, path) {
   const u = await apiUser(env, request);
-  const base = appUrl(env, request);
+  const base2 = appUrl(env, request);
   if (request.method === "GET" && path === "/api/v1/balance") {
     const b = await balances(env, u.id);
     return json({ balances: sumsToMajor(b.available), available: sumsToMajor(b.available), on_hold: sumsToMajor(b.held), hold_days: holdDays(env) });
@@ -1963,7 +1963,7 @@ async function apiV1(env, request, path) {
     const b = await readJson(request);
     const type = path.endsWith("collections") ? "col" : "lnk";
     const item = await createItemFor(env, u.id, { ...b, type }, "api");
-    return json({ ...itemView(item), url: `${base}/?pay=${type}:${item.id}` }, 201);
+    return json({ ...itemView(item), url: `${base2}/?pay=${type}:${item.id}` }, 201);
   }
   throw notFound("Unknown API endpoint");
 }
@@ -2333,6 +2333,179 @@ async function stats(env, request) {
   });
 }
 
+// src/seo.js
+var SYMBOL = { USD: "$", EUR: "\u20AC", GBP: "\xA3", AUD: "A$", CAD: "C$", SGD: "S$", JPY: "\xA5", MXN: "MX$", HKD: "HK$" };
+var price = (minor, cur) => {
+  const v = toMajor(minor, cur);
+  return (SYMBOL[cur] || cur + " ") + (isZeroDecimal(cur) ? Math.round(v).toLocaleString("en-US") : v.toFixed(2));
+};
+var esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var clip = (s, n) => {
+  s = String(s || "").replace(/\s+/g, " ").trim();
+  return s.length > n ? s.slice(0, n - 1) + "\u2026" : s;
+};
+var CYCLE = { WEEKLY: "week", MONTHLY: "month", QUARTERLY: "quarter", ANNUALLY: "year" };
+var base = (env, url) => (env.APP_URL || url.origin).replace(/\/$/, "");
+var HOME = {
+  title: "VyCheckout \u2014 Payment Links for Creators",
+  description: "Create a payment link in minutes and get paid by card or PayPal. Collections, subscriptions, pay links and a 1% referral programme. Free to join, no monthly fees."
+};
+async function metaFor(env, url) {
+  const b = base(env, url);
+  const pay = url.searchParams.get("pay");
+  const u = url.searchParams.get("u");
+  if (pay) {
+    const [type, id] = pay.split(":");
+    if (["col", "sub", "lnk"].includes(type) && id && id.length <= 64) {
+      const i = await env.DB.prepare(
+        `SELECT i.*, u.business_name, u.full_name, u.ref_code FROM items i JOIN users u ON u.id = i.user_id
+         WHERE i.id = ? AND i.type = ? AND i.deleted_at IS NULL AND u.suspended = 0 AND u.deleted_at IS NULL`
+      ).bind(id, type).first();
+      if (i) {
+        const seller = i.business_name || i.full_name || "a VyCheckout seller";
+        const expired = !!(i.expires_at && new Date(i.expires_at) < /* @__PURE__ */ new Date());
+        const amount = i.custom_amount ? "Any amount" : price(i.amount_minor + (i.ship_required ? i.ship_fee_minor : 0), i.currency);
+        const per = i.type === "sub" ? ` / ${CYCLE[i.cycle] || "month"}` : "";
+        const ship = i.ship_required ? i.ship_fee_minor ? " incl. shipping" : " \xB7 free shipping" : "";
+        const img = mediaUrl(i.image_key);
+        return {
+          title: `${clip(i.name, 70)} \u2014 ${amount}${per} | ${clip(seller, 40)}`,
+          description: clip(`${i.description || i.note || ""}${i.description || i.note ? " \u2014 " : ""}Pay ${seller} ${amount}${per}${ship} securely by card or PayPal on VyCheckout.`, 200),
+          image: img ? b + img : b + "/og.png",
+          bigImage: !!img,
+          url: `${b}/?pay=${type}:${i.id}`,
+          type: "product",
+          // Pay links are often private invoices, and expired links are dead ends: keep both out of search
+          noindex: i.type === "lnk" || expired,
+          price: i.custom_amount ? null : { amount: toMajor(i.amount_minor, i.currency), currency: i.currency },
+          seller
+        };
+      }
+    }
+    return { ...HOME, title: "Payment link not found | VyCheckout", image: b + "/og.png", url: b + "/", noindex: true };
+  }
+  if (u) {
+    const code = String(u).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+    const p = code && await env.DB.prepare(
+      `SELECT id, full_name, business_name, bio, avatar_key, ref_code,
+         (SELECT COUNT(*) FROM items WHERE user_id = users.id AND type = 'col' AND deleted_at IS NULL) AS posts
+       FROM users WHERE ref_code = ? AND deleted_at IS NULL AND suspended = 0`
+    ).bind(code).first();
+    if (p) {
+      const name = p.business_name || p.full_name || "VyCheckout seller";
+      const img = mediaUrl(p.avatar_key);
+      return {
+        title: `${clip(name, 60)} | VyCheckout`,
+        description: clip(p.bio ? `${p.bio} \u2014 Shop and pay ${name} on VyCheckout.` : `Shop and pay ${name} by card or PayPal on VyCheckout.`, 200),
+        image: img ? b + img : b + "/og.png",
+        bigImage: false,
+        url: `${b}/?u=${p.ref_code}`,
+        type: "profile",
+        noindex: !p.posts
+        // empty profiles add nothing to search
+      };
+    }
+    return { ...HOME, title: "Profile not found | VyCheckout", image: b + "/og.png", url: b + "/", noindex: true };
+  }
+  const priv = ["reset", "verify", "cancel_sub", "ref"].some((k) => url.searchParams.has(k));
+  return { ...HOME, image: b + "/og.png", bigImage: true, url: b + "/", type: "website", noindex: priv };
+}
+function tags(m) {
+  const t = [
+    `<meta name="description" content="${esc(m.description)}">`,
+    `<link rel="canonical" href="${esc(m.url)}">`,
+    `<meta name="robots" content="${m.noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large"}">`,
+    `<meta property="og:site_name" content="VyCheckout">`,
+    `<meta property="og:type" content="${esc(m.type || "website")}">`,
+    `<meta property="og:title" content="${esc(m.title)}">`,
+    `<meta property="og:description" content="${esc(m.description)}">`,
+    `<meta property="og:url" content="${esc(m.url)}">`,
+    `<meta property="og:image" content="${esc(m.image)}">`,
+    `<meta property="og:image:alt" content="${esc(m.title)}">`,
+    `<meta name="twitter:card" content="${m.bigImage ? "summary_large_image" : "summary"}">`,
+    `<meta name="twitter:title" content="${esc(m.title)}">`,
+    `<meta name="twitter:description" content="${esc(m.description)}">`,
+    `<meta name="twitter:image" content="${esc(m.image)}">`,
+    `<meta name="theme-color" content="#18181b">`
+  ];
+  if (m.price) {
+    t.push(`<meta property="product:price:amount" content="${esc(m.price.amount)}">`, `<meta property="product:price:currency" content="${esc(m.price.currency)}">`);
+    const ld = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: m.title.split(" \u2014 ")[0],
+      description: m.description,
+      image: m.image,
+      brand: { "@type": "Brand", name: m.seller },
+      offers: { "@type": "Offer", price: String(m.price.amount), priceCurrency: m.price.currency, availability: "https://schema.org/InStock", url: m.url }
+    };
+    t.push(`<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`);
+  }
+  return t.join("\n");
+}
+async function page(env, request) {
+  const url = new URL(request.url);
+  const asset = await env.ASSETS.fetch(new Request(new URL("/", url), request));
+  if (!asset.ok || !(asset.headers.get("Content-Type") || "").includes("text/html")) return asset;
+  let m;
+  try {
+    m = await metaFor(env, url);
+  } catch (e) {
+    console.error("seo meta", e?.stack || e);
+    m = { ...HOME, image: base(env, url) + "/og.png", url: base(env, url) + "/" };
+  }
+  const res = new HTMLRewriter().on("title", { element(el) {
+    el.setInnerContent(m.title);
+  } }).on("head", { element(el) {
+    el.append(tags(m), { html: true });
+  } }).transform(asset);
+  const h = new Headers(res.headers);
+  h.set("Cache-Control", "public, max-age=0, must-revalidate");
+  h.set("Vary", "Accept-Encoding");
+  return new Response(res.body, { status: res.status, headers: h });
+}
+function robots(env, request) {
+  const b = base(env, new URL(request.url));
+  return new Response(`User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /webhooks/
+
+Sitemap: ${b}/sitemap.xml
+`, {
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=86400" }
+  });
+}
+async function sitemap(env, request) {
+  const b = base(env, new URL(request.url));
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const [items, profiles] = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT i.id, i.type, i.created_at FROM items i JOIN users u ON u.id = i.user_id
+       WHERE i.type IN ('col','sub') AND i.deleted_at IS NULL AND (i.expires_at IS NULL OR i.expires_at > ?)
+         AND u.suspended = 0 AND u.deleted_at IS NULL ORDER BY i.created_at DESC LIMIT 20000`
+    ).bind(now),
+    env.DB.prepare(
+      `SELECT u.ref_code, MAX(i.created_at) AS updated FROM users u JOIN items i ON i.user_id = u.id
+       WHERE i.type = 'col' AND i.deleted_at IS NULL AND u.suspended = 0 AND u.deleted_at IS NULL
+       GROUP BY u.id ORDER BY updated DESC LIMIT 20000`
+    )
+  ]);
+  const url = (loc, mod, pri) => `<url><loc>${esc(loc)}</loc>${mod ? `<lastmod>${esc(mod.slice(0, 10))}</lastmod>` : ""}<priority>${pri}</priority></url>`;
+  const body = [
+    url(b + "/", null, "1.0"),
+    ...profiles.results.map((p) => url(`${b}/?u=${p.ref_code}`, p.updated, "0.7")),
+    ...items.results.map((i) => url(`${b}/?pay=${i.type}:${i.id}`, i.created_at, "0.6"))
+  ].join("\n");
+  return new Response(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
+</urlset>
+`, {
+    headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" }
+  });
+}
+
 // src/alerts.js
 async function dailyDigest(env) {
   const now = /* @__PURE__ */ new Date();
@@ -2523,6 +2696,15 @@ async function route(request, env, ctx) {
 var index_default = {
   async fetch(request, env, ctx) {
     const p = new URL(request.url).pathname;
+    if (request.method === "GET" || request.method === "HEAD") {
+      try {
+        if (p === "/" || p === "/index.html") return await page(env, request);
+        if (p === "/robots.txt") return robots(env, request);
+        if (p === "/sitemap.xml") return await sitemap(env, request);
+      } catch (e) {
+        console.error("seo", e?.stack || e);
+      }
+    }
     if (!p.startsWith("/api/") && !p.startsWith("/webhooks/")) return env.ASSETS.fetch(request);
     try {
       return await route(request, env, ctx);
