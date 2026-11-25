@@ -487,6 +487,10 @@ tbody tr:hover td{background:var(--bg);}
 .co-follow{flex-shrink:0;font-size:.74rem;font-weight:700;padding:.38rem .85rem;border-radius:8px;border:1.5px solid #fff;background:#fff;color:#111;cursor:pointer;font-family:inherit;}
 .co-follow.on{background:transparent;color:#fff;border-color:rgba(255,255,255,.4);}
 .co-follow:disabled{opacity:.6;}
+.co-fields textarea{min-height:64px;resize:vertical;line-height:1.45;}
+.co-lbl{display:block;font-size:.7rem;font-weight:700;color:var(--ink2);margin:.1rem 0 .3rem;}
+.txn-sub{font-size:.7rem;color:var(--ink3);font-weight:400;}
+.txn-note{font-size:.72rem;color:var(--ink2);font-style:italic;margin-top:.15rem;max-width:240px;white-space:normal;}
 .co-img{display:block;width:100%;aspect-ratio:1/1;max-height:360px;object-fit:cover;background:var(--al);}
 /* Stats bar compact */
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.8rem;}
@@ -689,7 +693,7 @@ tbody tr:hover td{background:var(--bg);}
 .fee-note{font-size:.72rem;color:var(--ink2);margin:-.3rem 0 .8rem;}
 .human-box{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:950;}
 .co-fields{display:grid;gap:.55rem;margin-bottom:.9rem;}
-.co-fields input{width:100%;padding:.6rem .75rem;border:1.5px solid var(--bord);border-radius:8px;font-size:.85rem;background:var(--surf);color:var(--ink);}
+.co-fields input,.co-fields textarea{width:100%;padding:.6rem .75rem;border:1.5px solid var(--bord);border-radius:8px;font-size:.85rem;background:var(--surf);color:var(--ink);font-family:inherit;}
 .acct-sec{background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1rem;max-width:560px;}
 .acct-sec h3{font-size:.86rem;font-weight:700;margin-bottom:.6rem;}
 .acct-sec p{font-size:.76rem;color:var(--ink2);margin-bottom:.7rem;line-height:1.5;}
@@ -2103,7 +2107,7 @@ function renderTxns(txns) {
     '<span class="pill pgo">Part refunded</span>';
   tb.innerHTML = txns.map(t => `<tr>
     <td>${fd(t.created_at)}</td>
-    <td>${t.payer_name ? '<strong>' + esc(t.payer_name) + '</strong>' : '<span style="color:var(--ink3)">—</span>'}</td>
+    <td>${t.payer_name ? '<strong>' + esc(t.payer_name) + '</strong>' : '<span style="color:var(--ink3)">—</span>'}${t.payer_email ? '<div class="txn-sub">' + esc(t.payer_email) + '</div>' : ''}${t.payer_note ? '<div class="txn-note">“' + esc(t.payer_note) + '”</div>' : ''}</td>
     <td>${esc(t.description || '')}</td>
     <td>${fmtAmt(t.gross_amount, t.currency)}</td>
     <td style="color:var(--grn)">${fmtAmt(t.net_amount, t.currency)}</td>
@@ -2524,14 +2528,16 @@ function renderPPButtons(containerId, item, onSuccess) {
         // for "any amount" links, how much the payer chose).
         createOrder: async function() {
           try {
+            const payer = item.payerInfo ? item.payerInfo() : {};
+            if (!payer) throw new Error('payer details required');
             const itemId = item.ensureId ? await item.ensureId() : item.id;
-            const d = await api('POST', '/api/pay/paypal/order', {
+            const d = await api('POST', '/api/pay/paypal/order', Object.assign({
               item_id: itemId,
               amount: (item.custom || item.custom_amount) ? amt : undefined,
-            });
+            }, payer));
             return d.id;
           } catch (e) {
-            toast(e.message, 'er');
+            if (e.message !== 'payer details required') toast(e.message, 'er');
             throw e;
           }
         },
@@ -2554,6 +2560,7 @@ function renderPPButtons(containerId, item, onSuccess) {
         onError: function(err) {
           console.error('PayPal error:', err);
           const errMsg = err && err.message ? err.message : 'Unknown error';
+          if (/payer details required/.test(errMsg)) return;   // already pointed the buyer at the name field
           toast('Payment error: ' + errMsg, 'er');
         }
       });
@@ -2692,7 +2699,7 @@ async function initCheckout(type, id) {
   const business = d.business;
   const cur = item.currency || 'USD';
   const seller = d.seller || null;
-  coCtx = { type, seller, item: { ...item, amount: +item.amount, currency: cur, business } };
+  coCtx = { type, seller, item: { ...item, amount: +item.amount, currency: cur, business, payerInfo: () => coPayer(type === 'sub') } };
   const isSub = type === 'sub';
   const isCustomAmt = item.custom_amount === true;
   const cycle = (item.cycle || 'MONTHLY').toLowerCase();
@@ -2719,8 +2726,10 @@ async function initCheckout(type, id) {
       ${isCustomAmt ? `<button class="ba" id="co-confirm-btn" style="width:100%;margin-bottom:.9rem" onclick="confirmCustomAmt()">Confirm Amount &amp; Pay</button>` : ''}
       <div id="co-pay" style="${isCustomAmt ? 'display:none' : ''}">
         <div class="co-fields">
-          ${isSub ? '<input type="text" id="co-name" placeholder="Your name" autocomplete="name">' : ''}
-          <input type="email" id="co-email" placeholder="Email for your receipt${isSub ? '' : ' (optional for PayPal)'}" autocomplete="email">
+          <label class="co-lbl" for="co-name">Your details (shared with the seller)</label>
+          <input type="text" id="co-name" placeholder="Your full name" autocomplete="name" maxlength="120">
+          <input type="email" id="co-email" placeholder="Email for your receipt${isSub ? '' : ' (optional)'}" autocomplete="email">
+          ${isSub ? '' : `<textarea id="co-note" maxlength="300" placeholder="Message to ${esc(business)} (optional) — e.g. order number, size, delivery details"></textarea>`}
         </div>
         <div class="pm-tabs"><button class="pm-tab active" onclick="swTab(this,'co-pp-p','co-sc-p')">🅿 PayPal</button><button class="pm-tab" onclick="swTab(this,'co-sc-p','co-pp-p');coCardInit()">💳 Card</button></div>
         <div class="pm-pane active" id="co-pp-p"><div id="paypal-checkout-container" style="min-height:50px"></div></div>
@@ -2759,6 +2768,15 @@ async function coToggleFollow() {
   const f = g('co-followers');
   if (f) f.textContent = s.followers + (s.followers === 1 ? ' follower' : ' followers') + ' · View profile';
   toast(s.is_following ? 'Following ' + s.name + ' ✓' : 'Unfollowed', 'ok');
+}
+
+// Who is paying: shown to the seller with the payment. Returns null (and points at the field) if something is missing.
+function coPayer(emailRequired) {
+  const name = (gi('co-name') || '').trim();
+  if (name.length < 2) { toast('Enter your name so the seller knows who paid', 'er'); g('co-name')?.focus(); return null; }
+  const email = coEmail(emailRequired);
+  if (email === null) return null;
+  return { payer_name: name, payer_email: email || undefined, payer_note: (gi('co-note') || '').trim() || undefined };
 }
 
 function coEmail(required) {
@@ -2822,10 +2840,11 @@ function renderPPSubscribe(containerId, item, onSuccess) {
       style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'subscribe', height: 48, tagline: false },
       // The Worker checks the item and creates the PayPal plan; PayPal then creates the subscription
       createSubscription: async function(data, actions) {
-        const email = coEmail(true);
-        if (!email) throw new Error('email required');
+        const payer = coPayer(true);
+        if (!payer) throw new Error('email required');
+        const email = payer.payer_email;
         try {
-          const d = await api('POST', '/api/pay/paypal/subscribe', { item_id: item.id, email, name: gi('co-name') });
+          const d = await api('POST', '/api/pay/paypal/subscribe', { item_id: item.id, email, name: payer.payer_name });
           return actions.subscription.create({ plan_id: d.plan_id, custom_id: d.custom_id, subscriber: { email_address: d.email } });
         } catch (e) { toast(e.message, 'er'); throw e; }
       },
@@ -2853,23 +2872,24 @@ async function coCardPay() {
   const sd = _SE['co-sc'];
   if (!sd) { toast('Card payments are not available right now', 'er'); return; }
   const isSub = coCtx.type === 'sub';
-  const email = coEmail(isSub);
-  if (email === null) return;
+  const payer = coPayer(isSub);
+  if (!payer) return;
+  const email = payer.payer_email || '';
   const btn = g('co-sc-btn'), err = g('co-sc-err');
   const label = isSub ? 'Subscribe with Card' : 'Pay with Card';
   if (btn) { btn.disabled = true; btn.textContent = 'Processing…'; }
   if (err) err.textContent = '';
   try {
     const item = coCtx.item;
-    const billing = { billing_details: { email: email || undefined, name: gi('co-name') || undefined } };
+    const billing = { billing_details: { email: email || undefined, name: payer.payer_name } };
     if (isSub) {
-      const s = await api('POST', '/api/pay/stripe/subscribe', { item_id: item.id, email, name: gi('co-name') });
+      const s = await api('POST', '/api/pay/stripe/subscribe', { item_id: item.id, email, name: payer.payer_name });
       const r = await sd.stripe.confirmCardPayment(s.client_secret, { payment_method: Object.assign({ card: sd.card }, billing) });
       if (r.error) throw new Error(r.error.message);
       const d = await api('POST', '/api/pay/stripe/subscribe/confirm', { subscription_id: s.subscription_id });
       checkoutDone(d.receipt);
     } else {
-      const intent = await api('POST', '/api/pay/stripe/intent', { item_id: item.id, amount: item.custom_amount ? item.amount : undefined, payer_email: email || undefined });
+      const intent = await api('POST', '/api/pay/stripe/intent', Object.assign({ item_id: item.id, amount: item.custom_amount ? item.amount : undefined }, payer));
       const r = await sd.stripe.confirmCardPayment(intent.client_secret, { payment_method: Object.assign({ card: sd.card }, billing) });
       if (r.error) throw new Error(r.error.message);
       if (!r.paymentIntent || r.paymentIntent.status !== 'succeeded') throw new Error('The card payment did not complete.');
