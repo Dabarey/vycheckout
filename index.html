@@ -1140,6 +1140,8 @@ const CF = c => CURS[c]?.f || '🌍';
 // Currencies with no minor unit: PayPal rejects "1000.00" JPY and Stripe expects ¥1000 as 1000, not 100000.
 const ZERO_DEC = ['JPY','KRW','VND','CLP'];
 const isZD = c => ZERO_DEC.includes(String(c || 'USD').toUpperCase());
+// Smallest payment: $3 by default (¥300), from the server's config
+const minPay = c => (CFG.min_payment || 3) * (isZD(c) ? 100 : 1);
 function fmtAmt(n, c) {
   const v = +n || 0;
   return CS(c) + (isZD(c) ? Math.round(v).toLocaleString() : v.toFixed(2));
@@ -1418,7 +1420,7 @@ async function renderUserDash() {
         <div class="fs"><h3>Collection details</h3>
           <div class="fg"><label>Name</label><input type="text" id="nc-n" placeholder="e.g. Product Sale" oninput="ncPreview()"></div>
           <div class="fg2">
-            <div class="fg" id="nc-amt-wrap"><label>Amount</label><div class="cw"><span class="cf" id="nc-flag">💲</span><input type="number" id="nc-a" placeholder="0.00" min="0.50" step="0.01" style="padding-left:2.2rem" oninput="ncPreview()"></div></div>
+            <div class="fg" id="nc-amt-wrap"><label>Amount</label><div class="cw"><span class="cf" id="nc-flag">💲</span><input type="number" id="nc-a" placeholder="0.00" min="3" step="0.01" style="padding-left:2.2rem" oninput="ncPreview()"></div></div>
             <div class="fg"><label>Currency</label><select id="nc-c" onchange="updateFlag('nc-c','nc-flag');ncPreview()">
               <option value="USD">🇺🇸 USD</option><option value="EUR">🇪🇺 EUR</option><option value="GBP">🇬🇧 GBP</option>
               <option value="AUD">🇦🇺 AUD</option><option value="CAD">🇨🇦 CAD</option><option value="SGD">🇸🇬 SGD</option>
@@ -1449,7 +1451,7 @@ async function renderUserDash() {
         <div class="fs"><h3>Plan details</h3>
           <div class="fg"><label>Plan Name</label><input type="text" id="ns-n" placeholder="e.g. Monthly Pro" oninput="nsPreview()"></div>
           <div class="fg2">
-            <div class="fg"><label>Amount</label><div class="cw"><span class="cf" id="ns-flag">💲</span><input type="number" id="ns-a" placeholder="0.00" min="0.50" step="0.01" style="padding-left:2.2rem" oninput="nsPreview()"></div></div>
+            <div class="fg"><label>Amount</label><div class="cw"><span class="cf" id="ns-flag">💲</span><input type="number" id="ns-a" placeholder="0.00" min="3" step="0.01" style="padding-left:2.2rem" oninput="nsPreview()"></div></div>
             <div class="fg"><label>Billing Cycle</label><select id="ns-cy"><option value="WEEKLY">Weekly</option><option value="MONTHLY" selected>Monthly</option><option value="QUARTERLY">Quarterly</option><option value="ANNUALLY">Yearly</option></select></div>
           </div>
           <div class="fg"><label>Currency</label><select id="ns-c" onchange="updateFlag('ns-c','ns-flag');nsPreview()">
@@ -1477,7 +1479,7 @@ async function renderUserDash() {
         <div class="fs"><h3>Link details</h3>
           <div class="fg"><label>Title</label><input type="text" id="nl-n" placeholder="e.g. Invoice #1042" oninput="nlPreview()"></div>
           <div class="fg2">
-            <div class="fg"><label>Amount</label><div class="cw"><span class="cf" id="nl-flag">💲</span><input type="number" id="nl-a" placeholder="0.00" min="0.50" step="0.01" style="padding-left:2.2rem" oninput="nlPreview()"></div></div>
+            <div class="fg"><label>Amount</label><div class="cw"><span class="cf" id="nl-flag">💲</span><input type="number" id="nl-a" placeholder="0.00" min="3" step="0.01" style="padding-left:2.2rem" oninput="nlPreview()"></div></div>
             <div class="fg"><label>Expires In</label><select id="nl-e"><option value="0">Never</option><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select></div>
           </div>
 
@@ -2390,7 +2392,7 @@ async function createCol() {
   if (!currentUser) { toast('Please log in first', 'er'); return; }
   const name = gi('nc-n'), amt = parseFloat(gi('nc-a') || '0'), cur = gi('nc-c') || 'USD', desc = gi('nc-d');
   if (!name) { toast('Enter a collection name', 'er'); g('nc-n')?.focus(); return; }
-  if (!amt || amt < 0.5) { toast('Enter an amount (min 0.50)', 'er'); g('nc-a')?.focus(); return; }
+  if (!amt || amt < minPay(cur)) { toast('Enter an amount (minimum ' + fmtAmt(minPay(cur), cur) + ')', 'er'); g('nc-a')?.focus(); return; }
   const item = await saveItem('col', { name, amount: amt, currency: cur, description: desc }, 'nc-btn', 'Save Collection');
   if (!item) return;
   showCreatedLink('Collection created!', name, coUrl('col', item.id));
@@ -2404,7 +2406,7 @@ async function createSub() {
   if (!currentUser) { toast('Please log in first', 'er'); return; }
   const name = gi('ns-n'), amt = parseFloat(gi('ns-a') || '0'), cur = gi('ns-c') || 'USD', cy = gi('ns-cy') || 'MONTHLY', desc = gi('ns-d');
   if (!name) { toast('Enter a plan name', 'er'); g('ns-n')?.focus(); return; }
-  if (!amt || amt < 0.5) { toast('Enter an amount (min 0.50)', 'er'); g('ns-a')?.focus(); return; }
+  if (!amt || amt < minPay(cur)) { toast('Enter an amount (minimum ' + fmtAmt(minPay(cur), cur) + ')', 'er'); g('ns-a')?.focus(); return; }
   const item = await saveItem('sub', { name, amount: amt, currency: cur, cycle: cy, description: desc }, 'ns-btn', 'Save Plan');
   if (!item) return;
   showCreatedLink('Subscription plan created!', name + ' · ' + cy.toLowerCase(), coUrl('sub', item.id));
@@ -2418,7 +2420,7 @@ async function createLink() {
   const name = gi('nl-n'), amt = parseFloat(gi('nl-a') || '0'), cur = gi('nl-c') || 'USD', note = gi('nl-no');
   const expires_days = parseInt(gi('nl-e') || '0', 10);
   if (!name) { toast('Enter a title for your link', 'er'); g('nl-n')?.focus(); return; }
-  if (!amt || amt < 0.5) { toast('Enter an amount (min 0.50)', 'er'); g('nl-a')?.focus(); return; }
+  if (!amt || amt < minPay(cur)) { toast('Enter an amount (minimum ' + fmtAmt(minPay(cur), cur) + ')', 'er'); g('nl-a')?.focus(); return; }
   const item = await saveItem('lnk', { name, amount: amt, currency: cur, note, expires_days }, 'nl-btn', 'Save &amp; Get Link');
   if (!item) return;
   showCreatedLink('Payment link ready!', name, coUrl('lnk', item.id));
@@ -2779,7 +2781,7 @@ async function initCheckout(type, id) {
            <div class="co-custom-wrap">
              <span class="co-custom-sym">${esc(CS(cur))}</span>
              <input type="number" id="co-custom-inp" class="co-custom-input"
-               placeholder="Enter amount" min="1" step="${isZD(cur) ? '1' : '0.01'}"
+               placeholder="Enter amount" min="${minPay(cur)}" step="${isZD(cur) ? '1' : '0.01'}"
                oninput="updateCustomAmt('${esc(cur)}')">
            </div>`
         : `<div class="price">${fmtAmt(+item.amount + (item.ship_required ? +item.ship_fee : 0), cur)}${isSub ? `<span style="font-size:.9rem;font-weight:600;opacity:.7"> / ${esc(cycle.replace('ly', '').replace('annual', 'year'))}</span>` : ''}</div>`}
@@ -3362,7 +3364,7 @@ function _showPreview(boxId, containerId, titleId, nameVal, amtVal, curVal, sour
 
   const amt = parseFloat(amtVal);
   const cur = (curVal || 'USD').toUpperCase();
-  if (!nameVal || !amt || amt < 0.5) {
+  if (!nameVal || !amt || amt < minPay(cur)) {
     box.style.display = 'none';
     return;
   }
@@ -4283,8 +4285,8 @@ function updateCustomAmt(currency) {
 function confirmCustomAmt() {
   const inp = document.getElementById('co-custom-inp');
   const val = parseFloat(inp?.value || 0);
-  if (!val || val < 1) { toast('Please enter an amount of at least 1', 'er'); inp?.focus(); return; }
   if (!coCtx) return;
+  if (!val || val < minPay(coCtx.item.currency)) { toast('Please enter at least ' + fmtAmt(minPay(coCtx.item.currency), coCtx.item.currency), 'er'); inp?.focus(); return; }
 
   const cur = coCtx.item.currency;
   coCtx.item.amount = isZD(cur) ? Math.round(val) : +val.toFixed(2);

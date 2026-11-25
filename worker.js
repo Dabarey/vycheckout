@@ -170,6 +170,7 @@ function cleanShipping(raw) {
   return out;
 }
 var shippingText = (s) => s ? [s.name, s.phone, s.line1, s.line2, [s.city, s.region, s.postal].filter(Boolean).join(", "), s.country].filter(Boolean).join("\n") : "";
+var minPaymentMinor = (env, currency) => toMinor(parseFloat(env.MIN_PAYMENT || "3") * (isZeroDecimal(currency) ? 100 : 1), currency);
 
 // src/human.js
 var COOKIE = "vy_human";
@@ -671,7 +672,7 @@ function priceFor(env, item, requested) {
   if (!item.custom_amount) return item.amount_minor;
   if (requested == null || requested === "") throw bad("Enter an amount");
   const minor = toMinor(requested, item.currency);
-  const min = isZeroDecimal(item.currency) ? 50 : 100;
+  const min = minPaymentMinor(env, item.currency);
   const max = toMinor(parseFloat(env.MAX_PAYMENT || "10000"), item.currency);
   if (minor < min) throw bad(`Minimum amount is ${majorString(min, item.currency)} ${item.currency}`);
   if (minor > max) throw bad(`Maximum amount is ${majorString(max, item.currency)} ${item.currency}`);
@@ -1640,7 +1641,7 @@ async function createItemFor(env, userId, b, source) {
   let amount = 0;
   if (!custom) {
     amount = toMinor(b.amount, currency);
-    const min = 50;
+    const min = minPaymentMinor(env, currency);
     const max = toMinor(parseFloat(env.MAX_PAYMENT || "10000"), currency);
     if (amount < min) throw bad(`Minimum amount is ${toMajor(min, currency)} ${currency}`);
     if (amount > max) throw bad(`Maximum amount is ${toMajor(max, currency)} ${currency}`);
@@ -1927,6 +1928,7 @@ function publicConfig(env) {
     fee_pct: parseInt(env.PLATFORM_FEE_BPS || "1900", 10) / 100,
     turnstile_site_key: env.TURNSTILE_SECRET_KEY ? env.TURNSTILE_SITE_KEY || null : null,
     referral_pct: parseInt(env.REFERRAL_BPS || "100", 10) / 100,
+    min_payment: parseFloat(env.MIN_PAYMENT || "3"),
     min_withdraw: { paypal: parseFloat(env.MIN_WITHDRAW_PAYPAL || "100"), bank: parseFloat(env.MIN_WITHDRAW_BANK || "500") },
     hold_days: holdDays(env),
     new_account_hold_days: parseFloat(env.NEW_ACCOUNT_HOLD_DAYS || "14"),
